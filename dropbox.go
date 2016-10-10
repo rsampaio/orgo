@@ -32,7 +32,7 @@ func (s *SignatureMismatchErr) Error() string {
 }
 
 type DropboxHandler struct {
-	OauthConfig *oauth2.Config
+	oauthConfig *oauth2.Config
 	workChan    chan string
 }
 
@@ -46,13 +46,17 @@ func NewDropboxHandler(apiKey string, apiSecret string, redirectURL string, work
 			TokenURL: "https://api.dropbox.com/1/oauth2/token",
 		},
 	}
-	return &DropboxHandler{OauthConfig: oauthConfig, workChan: workChan}
+	return &DropboxHandler{oauthConfig: oauthConfig, workChan: workChan}
+}
+
+func (h *DropboxHandler) AuthCodeURL() string {
+	return h.oauthConfig.AuthCodeURL("state-token", []oauth2.AuthCodeOption{}...)
 }
 
 func (h *DropboxHandler) verifyRequest(r *http.Request) (bytes.Buffer, error) {
 	var buf bytes.Buffer
 	signature := r.Header.Get("X-Dropbox-Signature")
-	mac := hmac.New(sha256.New, []byte(h.OauthConfig.ClientSecret))
+	mac := hmac.New(sha256.New, []byte(h.oauthConfig.ClientSecret))
 	io.Copy(mac, io.TeeReader(r.Body, &buf))
 	expectedMac := mac.Sum(nil)
 	actualMac, err := hex.DecodeString(signature)
@@ -69,7 +73,7 @@ func (h *DropboxHandler) verifyRequest(r *http.Request) (bytes.Buffer, error) {
 
 func (h *DropboxHandler) HandleOauthCallback(w http.ResponseWriter, r *http.Request) {
 	code := r.FormValue("code")
-	tok, err := h.OauthConfig.Exchange(context.Background(), code)
+	tok, err := h.oauthConfig.Exchange(context.Background(), code)
 	if err != nil {
 		http.Error(w, "token exchange failed", http.StatusBadRequest)
 	}
@@ -84,6 +88,7 @@ func (h *DropboxHandler) HandleOauthCallback(w http.ResponseWriter, r *http.Requ
 
 	db.Close()
 	log.Printf("uid=%s account_id=%s\n", tok.Extra("uid"), tok.Extra("account_id"))
+	http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
 }
 
 func (h *DropboxHandler) HandleWebhook(w http.ResponseWriter, r *http.Request) {
