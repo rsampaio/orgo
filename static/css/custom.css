@@ -1,10 +1,10 @@
 
 /* Custom */
-.g-signin2{
+#google-login{
   width: 100%;
 }
 
-.g-signin2 > div{
+#google-login > div{
   margin: 0 auto;
 }
 

@@ -80,8 +80,8 @@ func (g *GoogleHandler) HandleGoogleOauthCallback(w http.ResponseWriter, r *http
 // HandleVerifyIdentity checks token_id against TokenInfo service to validate
 // expiration and signature if the token is available in the session
 func (g *GoogleHandler) HandleVerifyToken(w http.ResponseWriter, r *http.Request) {
-	tokenID := r.FormValue("access_token")
-
+	accessToken := r.FormValue("access_token")
+	idToken := r.FormValue("id_token")
 	// Write the session id and redirect to /
 	client := g.oauthConfig.Client(context.Background(), &oauth2.Token{})
 	service, err := oauth2api.New(client)
@@ -91,10 +91,12 @@ func (g *GoogleHandler) HandleVerifyToken(w http.ResponseWriter, r *http.Request
 	}
 
 	tokenCall := service.Tokeninfo()
-	tokenCall.AccessToken(tokenID)
+	tokenCall.AccessToken(accessToken)
+	tokenCall.IdToken(idToken)
 	tokenInfo, err := tokenCall.Do()
 	g.logger.Info(fmt.Sprintf("%#v", tokenInfo))
 	if err != nil {
+		g.logger.Error(err.Error())
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
