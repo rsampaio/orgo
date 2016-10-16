@@ -9,9 +9,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 
+	"github.com/uber-go/zap"
 	"golang.org/x/oauth2"
 )
 
@@ -34,6 +34,7 @@ func (s *SignatureMismatchErr) Error() string {
 type DropboxHandler struct {
 	oauthConfig *oauth2.Config
 	workChan    chan string
+	logger      zap.Logger
 }
 
 func NewDropboxHandler(apiKey string, apiSecret string, redirectURL string, workChan chan string) *DropboxHandler {
@@ -46,7 +47,7 @@ func NewDropboxHandler(apiKey string, apiSecret string, redirectURL string, work
 			TokenURL: "https://api.dropbox.com/1/oauth2/token",
 		},
 	}
-	return &DropboxHandler{oauthConfig: oauthConfig, workChan: workChan}
+	return &DropboxHandler{logger: zap.New(zap.NewTextEncoder()), oauthConfig: oauthConfig, workChan: workChan}
 }
 
 func (h *DropboxHandler) AuthCodeURL() string {
@@ -61,7 +62,7 @@ func (h *DropboxHandler) verifyRequest(r *http.Request) (bytes.Buffer, error) {
 	expectedMac := mac.Sum(nil)
 	actualMac, err := hex.DecodeString(signature)
 	if err != nil {
-		log.Printf("decode signature error: %s", err.Error())
+		h.logger.Error("decode signature error", zap.String("msg", err.Error()))
 		return bytes.Buffer{}, &SignatureMismatchErr{}
 	}
 
@@ -82,26 +83,28 @@ func (h *DropboxHandler) HandleOauthCallback(w http.ResponseWriter, r *http.Requ
 	token := tok.AccessToken
 	db := NewDB("orgo", "orgo.db")
 	if err := db.Put([]byte(uid), []byte(token)); err != nil {
-		log.Print(err.Error())
+		h.logger.Error(err.Error())
 		http.Error(w, "save token", http.StatusBadRequest)
 	}
 
 	db.Close()
-	log.Printf("uid=%s account_id=%s\n", tok.Extra("uid"), tok.Extra("account_id"))
+	h.logger.Info("redirect",
+		zap.String("uid", tok.Extra("uid").(string)),
+		zap.String("account_id", tok.Extra("account_id").(string)))
 	http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
 }
 
 func (h *DropboxHandler) HandleWebhook(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET":
-		log.Println("challenge request")
+		h.logger.Info("challenge request")
 		fmt.Fprint(w, r.FormValue("challenge"))
 	case "POST":
 		if body, err := h.verifyRequest(r); err == nil {
 			var event Event
 			err := json.NewDecoder(&body).Decode(&event)
 			if err != nil {
-				log.Printf("decoder error: %s", err.Error())
+				h.logger.Info("decoder error", zap.String("msg", err.Error()))
 			}
 
 			for _, account := range event.ListFolder.Accounts {

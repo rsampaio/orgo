@@ -1,12 +1,13 @@
 package main
 
 import (
+	"fmt"
 	"io/ioutil"
-	"log"
 	"strings"
 
 	"github.com/dropbox/dropbox-sdk-go-unofficial/dropbox"
 	"github.com/dropbox/dropbox-sdk-go-unofficial/dropbox/files"
+	"github.com/uber-go/zap"
 )
 
 type OrgEntry struct {
@@ -16,9 +17,10 @@ type OrgEntry struct {
 }
 
 func Process(accountID string, errChan chan error) {
+	logger := zap.New(zap.NewTextEncoder())
 	db := NewDB("orgo", "orgo.db")
 	key, _ := db.Get([]byte(accountID))
-	log.Printf("processing %s\n", accountID)
+	logger.Info("processing", zap.String("account_id", accountID))
 
 	dbxCfg := dropbox.Config{Token: string(key)}
 	dbx := files.New(dbxCfg)
@@ -26,15 +28,15 @@ func Process(accountID string, errChan chan error) {
 	listFolderArg := files.NewListFolderArg("")
 	folderRes, err := dbx.ListFolder(listFolderArg)
 	if err != nil {
-		log.Print(err.Error())
+		logger.Error(err.Error())
 		errChan <- err
 	}
 
 	for _, entry := range folderRes.Entries {
-		log.Printf("%#v", entry.(*files.FileMetadata).Metadata.Name)
+		logger.Info("file", zap.String("name", entry.(*files.FileMetadata).Metadata.Name.(string)))
 		_, reader, err := dbx.Download(&files.DownloadArg{Path: entry.(*files.FileMetadata).Metadata.PathLower})
 		if err != nil {
-			log.Print(err.Error())
+			logger.Error(err.Error())
 			errChan <- err
 		}
 
@@ -58,7 +60,7 @@ func Process(accountID string, errChan chan error) {
 		}
 
 		for _, e := range entries {
-			log.Printf("%#v", e)
+			logger.Info(fmt.Sprintf("%#v", e))
 		}
 	}
 	db.Close()
@@ -71,7 +73,7 @@ func WaitWork(workChan <-chan string) {
 		case work := <-workChan:
 			go Process(work, errChan)
 		case err := <-errChan:
-			log.Printf("Err: %s\n", err.Error())
+			logger.Error(err.Error())
 		}
 	}
 }

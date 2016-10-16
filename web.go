@@ -4,22 +4,23 @@ import (
 	"context"
 	"fmt"
 	"html/template"
-	"log"
 	"net/http"
 	"os"
 	"path"
 
 	"github.com/gorilla/sessions"
+	"github.com/uber-go/zap"
 )
 
 type WebHandler struct {
-	ctx   context.Context
-	store *sessions.CookieStore
+	ctx    context.Context
+	store  *sessions.CookieStore
+	logger zap.Logger
 }
 
 func NewWebHandler(ctx context.Context, cookieSecret string) *WebHandler {
 	store := sessions.NewCookieStore([]byte(cookieSecret))
-	return &WebHandler{ctx: ctx, store: store}
+	return &WebHandler{logger: zap.New(zap.NewTextEncoder()), ctx: ctx, store: store}
 }
 
 func (g *WebHandler) HandleTemplates(w http.ResponseWriter, r *http.Request) {
@@ -27,20 +28,6 @@ func (g *WebHandler) HandleTemplates(w http.ResponseWriter, r *http.Request) {
 	layout := path.Join("tmpl", "layout.html")
 
 	// if not authenticated load index
-	session, err := g.store.Get(r, "auth")
-	if err != nil {
-		http.Error(w, "session", http.StatusInternalServerError)
-	}
-
-	id, ok := session.Values["token_id"]
-	if ok {
-		log.Print(id)
-	}
-
-	if id == nil {
-		r.URL.Path = "/index.html"
-	}
-
 	if r.URL.Path == "/" {
 		r.URL.Path = "/index.html"
 	}
@@ -67,13 +54,13 @@ func (g *WebHandler) HandleTemplates(w http.ResponseWriter, r *http.Request) {
 
 	tmpl, err := template.ParseFiles(layout, bodyTmpl)
 	if err != nil {
-		log.Print(err.Error())
+		g.logger.Error(err.Error())
 		http.Error(w, "template", http.StatusInternalServerError)
 		return
 	}
 
 	if err := tmpl.ExecuteTemplate(w, "layout", templateOptions); err != nil {
-		log.Print(err.Error())
+		g.logger.Error(err.Error())
 		http.Error(w, "template", http.StatusInternalServerError)
 	}
 }

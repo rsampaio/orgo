@@ -2,10 +2,11 @@ package main
 
 import (
 	"context"
-	"log"
+	"fmt"
 	"net/http"
 
 	uuid "github.com/satori/go.uuid"
+	"github.com/uber-go/zap"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 	calendar "google.golang.org/api/calendar/v3"
@@ -14,16 +15,18 @@ import (
 
 type GoogleHandler struct {
 	oauthConfig *oauth2.Config
+	logger      zap.Logger
 }
 
 func NewGoogleHandler(apiKey, apiSecret, redirectURL string) *GoogleHandler {
 	return &GoogleHandler{
+		logger: zap.New(zap.NewTextEncoder()),
 		oauthConfig: &oauth2.Config{
 			ClientID:     apiKey,
 			ClientSecret: apiSecret,
-			RedirectURL:  "postmessage",
+			RedirectURL:  redirectURL,
 			Endpoint:     google.Endpoint,
-			Scopes:       []string{calendar.CalendarScope, oauth2api.UserinfoEmailScope},
+			Scopes:       []string{calendar.CalendarScope, oauth2api.UserinfoEmailScope, oauth2api.UserinfoProfileScope},
 		},
 	}
 }
@@ -36,39 +39,48 @@ func (g *GoogleHandler) AuthCodeURL() string {
 func (g *GoogleHandler) HandleGoogleOauthCallback(w http.ResponseWriter, r *http.Request) {
 	code := r.FormValue("code")
 	if code == "" {
-		log.Print("code is empty")
+		g.logger.Info("code is empty")
 		http.Error(w, "code is empty", http.StatusBadRequest)
 		return
 	}
 
-	tok, err := g.oauthConfig.Exchange(context.Background(), code)
+	tok, err := g.oauthConfig.Exchange(oauth2.NoContext, code)
 	if err != nil {
-		log.Print(err.Error())
+		g.logger.Error(err.Error())
 		http.Error(w, "token exchange failed", http.StatusBadRequest)
 		return
 	}
 
-	log.Printf("code=%s", code)
-	log.Printf("request=%#v", r)
-	if token_id := tok.Extra("token_id"); token_id != nil {
-		token := tok.AccessToken
+	client := g.oauthConfig.Client(oauth2.NoContext, &oauth2.Token{AccessToken: tok.AccessToken})
+	service, _ := oauth2api.New(client)
+	tokenCall := service.Tokeninfo()
+	tokenCall.AccessToken(tok.AccessToken)
+	tokenInfo, _ := tokenCall.Do()
 
-		db := NewDB("orgo", "orgo.db")
-		defer db.Close()
-		if err := db.Put([]byte(token_id.(string)), []byte(token)); err != nil {
-			log.Print(err.Error())
-			http.Error(w, "save token", http.StatusBadRequest)
-			return
-		}
-		log.Printf("google=%#v", tok)
-		http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
+	g.logger.Info("google user id", zap.String("user_id", tokenInfo.UserId))
+
+	db := NewDB("orgo", "orgo.db")
+	defer db.Close()
+	key := fmt.Sprintf("%s:access_token", tokenInfo.UserId)
+	if err := db.Put([]byte(key), []byte(tok.AccessToken)); err != nil {
+		g.logger.Error(err.Error())
+		http.Error(w, "save token", http.StatusBadRequest)
+		return
 	}
+
+	key = fmt.Sprintf("%s:code", tokenInfo.UserId)
+	if err := db.Put([]byte(key), []byte(code)); err != nil {
+		g.logger.Error(err.Error())
+		http.Error(w, "save code", http.StatusBadRequest)
+		return
+	}
+	http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
 }
 
 // HandleVerifyIdentity checks token_id against TokenInfo service to validate
 // expiration and signature if the token is available in the session
 func (g *GoogleHandler) HandleVerifyToken(w http.ResponseWriter, r *http.Request) {
-	tokenID := r.FormValue("token_id")
+	tokenID := r.FormValue("access_token")
 
 	// Write the session id and redirect to /
 	client := g.oauthConfig.Client(context.Background(), &oauth2.Token{})
@@ -79,13 +91,13 @@ func (g *GoogleHandler) HandleVerifyToken(w http.ResponseWriter, r *http.Request
 	}
 
 	tokenCall := service.Tokeninfo()
-	tokenCall.IdToken(tokenID)
+	tokenCall.AccessToken(tokenID)
 	tokenInfo, err := tokenCall.Do()
+	g.logger.Info(fmt.Sprintf("%#v", tokenInfo))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	log.Printf("%#v", tokenInfo)
 	http.Error(w, "", http.StatusOK)
 }

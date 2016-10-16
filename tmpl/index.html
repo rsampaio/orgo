@@ -11,7 +11,7 @@
               <nav class="nav nav-masthead">
                 <a class="nav-link active" href="#">Home</a>
                 <a class="nav-link" href="#">Contact</a>
-                <a id="google-sign-out" class="nav-link" href="#">Sign out</a>
+                <a id="google-logout" class="nav-link" href="#"></a>
               </nav>
             </div>
           </div>
@@ -20,7 +20,14 @@
             <h1 class="cover-heading">Orgo.</h1>
             <p class="lead">Save org-agenda files into a Dropbox folder and get tasks created in google calendar.</p>
             <p class="lead">
-              <button id="google-sign-in" type="button" class="btn btn-outline-secondary">Sign-in with Google</button>
+              <div id="google-login"
+                   class="g-signin2"
+                   data-theme="dark"
+                   data-longtitle="true"
+                   data-onsuccess="onSignIn"
+                   data-width="300"
+                   data-height="40"
+                   data-scope="profile email https://www.googleapis.com/auth/calendar"></div>
             </p>
           </div>
 

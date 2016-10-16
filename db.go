@@ -1,8 +1,6 @@
 package main
 
 import (
-	"log"
-
 	"github.com/boltdb/bolt"
 )
 
@@ -26,7 +24,6 @@ func (d *DB) Get(key []byte) ([]byte, error) {
 		return nil
 	})
 	if err != nil {
-		log.Print("view failed")
 		return []byte(""), err
 	}
 
@@ -35,7 +32,6 @@ func (d *DB) Get(key []byte) ([]byte, error) {
 
 func (d *DB) Put(key []byte, value []byte) error {
 	return d.handle.Update(func(tx *bolt.Tx) error {
-		log.Printf("(%s) %s=%s\n", d.bucket, key, value)
 		b, err := tx.CreateBucketIfNotExists(d.bucket)
 		if err != nil {
 			return err

@@ -2,18 +2,22 @@ package main
 
 import (
 	"context"
-	"log"
 	"net/http"
 
 	"github.com/joeshaw/envdecode"
+	"github.com/uber-go/zap"
 )
 
+var logger zap.Logger
+
 func main() {
+	logger = zap.New(zap.NewTextEncoder())
+
 	var cfg Config
 	var urls map[string]string
 	err := envdecode.Decode(&cfg)
 	if err != nil {
-		log.Fatal(err.Error())
+		logger.Fatal(err.Error())
 	}
 
 	ctx := context.Background()
@@ -41,5 +45,5 @@ func main() {
 	http.Handle("/static/", http.StripPrefix("/static/", fs))
 	http.HandleFunc("/", webHandler.HandleTemplates)
 
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	logger.Fatal(http.ListenAndServe(":8080", nil).Error())
 }
