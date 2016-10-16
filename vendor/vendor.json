@@ -51,6 +51,12 @@
 			"revisionTime": "2016-08-17T18:46:32Z"
 		},
 		{
+			"checksumSHA1": "veX5bpYOBjZZWMyWxXxys8EH9d8=",
+			"path": "github.com/gorilla/securecookie",
+			"revision": "fa5329f913702981df43dcb2a380bac429c810b5",
+			"revisionTime": "2016-10-03T05:16:01Z"
+		},
+		{
 			"checksumSHA1": "f1dfF3vmO95G/hbwMYlFru/FfMo=",
 			"path": "github.com/gorilla/sessions",
 			"revision": "ca9ada44574153444b00d3fd9c8559e4cc95f896",
@@ -67,6 +73,18 @@
 			"path": "github.com/satori/go.uuid",
 			"revision": "b061729afc07e77a8aa4fad0a2fd840958f1942a",
 			"revisionTime": "2016-09-27T10:08:44Z"
+		},
+		{
+			"checksumSHA1": "Qb0eMcC9P6tYLT4KNLvNNmvhPr4=",
+			"path": "github.com/uber-go/atomic",
+			"revision": "0c9e689d64f004564b79d9a663634756df322902",
+			"revisionTime": "2016-07-18T20:38:59Z"
+		},
+		{
+			"checksumSHA1": "j+wWJzvcoh8tITqZSTW/9iXUHBg=",
+			"path": "github.com/uber-go/zap",
+			"revision": "c4939d1166b2220bb45338e21506623b4bbdec50",
+			"revisionTime": "2016-09-29T23:02:16Z"
 		},
 		{
 			"path": "gitlab.com/rvaz/orgo",

@@ -33,7 +33,7 @@ func Process(accountID string, errChan chan error) {
 	}
 
 	for _, entry := range folderRes.Entries {
-		logger.Info("file", zap.String("name", entry.(*files.FileMetadata).Metadata.Name.(string)))
+		logger.Info("file", zap.String("name", entry.(*files.FileMetadata).Metadata.Name))
 		_, reader, err := dbx.Download(&files.DownloadArg{Path: entry.(*files.FileMetadata).Metadata.PathLower})
 		if err != nil {
 			logger.Error(err.Error())
