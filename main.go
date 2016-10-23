@@ -34,7 +34,7 @@ func main() {
 		"Google":  googleHandler.AuthCodeURL(),
 	}
 	ctx = context.WithValue(ctx, "Urls", urls)
-	webHandler := NewWebHandler(ctx, cfg.HttpCookieSecret)
+	webHandler := NewWebHandler(ctx)
 
 	// Default handler
 	http.HandleFunc("/dropbox/webhook", dropboxHandler.HandleWebhook)
@@ -43,7 +43,7 @@ func main() {
 	http.HandleFunc("/google/verify_token", googleHandler.HandleVerifyToken)
 	fs := http.FileServer(http.Dir("static"))
 	http.Handle("/static/", http.StripPrefix("/static/", fs))
-	http.HandleFunc("/", webHandler.HandleTemplates)
+	http.HandleFunc("/", webHandler.HandleIndex)
 
 	logger.Fatal(http.ListenAndServe(":8080", nil).Error())
 }

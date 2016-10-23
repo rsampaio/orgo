@@ -8,34 +8,29 @@ import (
 	"os"
 	"path"
 
-	"github.com/gorilla/sessions"
 	"github.com/uber-go/zap"
 )
 
 type WebHandler struct {
 	ctx    context.Context
-	store  *sessions.CookieStore
 	logger zap.Logger
 }
 
-func NewWebHandler(ctx context.Context, cookieSecret string) *WebHandler {
-	store := sessions.NewCookieStore([]byte(cookieSecret))
-	return &WebHandler{logger: zap.New(zap.NewTextEncoder()), ctx: ctx, store: store}
+func NewWebHandler(ctx context.Context) *WebHandler {
+	return &WebHandler{logger: zap.New(zap.NewTextEncoder()), ctx: ctx}
 }
 
-func (g *WebHandler) HandleTemplates(w http.ResponseWriter, r *http.Request) {
-	var templateOptions interface{}
-	layout := path.Join("tmpl", "layout.html")
-
-	// if not authenticated load index
+// HandleIndex requests to protected resources
+func (h *WebHandler) HandleIndex(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path == "/" {
 		r.URL.Path = "/index.html"
 	}
+	h.HandleTemplates(w, r)
+}
 
-	if r.URL.Path == "/index.html" {
-		templateOptions = g.ctx.Value("Urls")
-	}
-
+func (h *WebHandler) HandleTemplates(w http.ResponseWriter, r *http.Request) {
+	var templateOptions interface{}
+	layout := path.Join("tmpl", "layout.html")
 	bodyTmpl := path.Join("tmpl", r.URL.Path)
 
 	info, err := os.Stat(bodyTmpl)
@@ -54,13 +49,13 @@ func (g *WebHandler) HandleTemplates(w http.ResponseWriter, r *http.Request) {
 
 	tmpl, err := template.ParseFiles(layout, bodyTmpl)
 	if err != nil {
-		g.logger.Error(err.Error())
+		h.logger.Error(err.Error())
 		http.Error(w, "template", http.StatusInternalServerError)
 		return
 	}
 
 	if err := tmpl.ExecuteTemplate(w, "layout", templateOptions); err != nil {
-		g.logger.Error(err.Error())
+		h.logger.Error(err.Error())
 		http.Error(w, "template", http.StatusInternalServerError)
 	}
 }

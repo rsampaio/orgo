@@ -28,7 +28,35 @@
     <script src="/static/js/custom.js"></script>
     <script src="https://apis.google.com/js/client:platform.js?onload=startApp" async defer></script>
 
-    {{template "body" .}}
+    <div class="site-wrapper">
+
+      <div class="site-wrapper-inner">
+
+        <div class="cover-container">
+
+          <div class="masthead clearfix">
+            <div class="inner">
+              <h3 class="masthead-brand">Orgo</h3>
+              <nav class="nav nav-masthead">
+                <a class="nav-link active" href="#">Home</a>
+                <a id="google-logout" class="nav-link" href="#"></a>
+              </nav>
+            </div>
+          </div>
+
+          {{template "body" .}}
+
+          <div class="mastfoot">
+            <div class="inner">
+              rsampaio.info
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
     <!-- Bootstrap core JavaScript
     ================================================== -->
     <!-- Placed at the end of the document so the pages load faster -->

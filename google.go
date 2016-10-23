@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 
@@ -80,10 +79,12 @@ func (g *GoogleHandler) HandleGoogleOauthCallback(w http.ResponseWriter, r *http
 // HandleVerifyIdentity checks token_id against TokenInfo service to validate
 // expiration and signature if the token is available in the session
 func (g *GoogleHandler) HandleVerifyToken(w http.ResponseWriter, r *http.Request) {
+	accountId := r.FormValue("account_id")
 	accessToken := r.FormValue("access_token")
 	idToken := r.FormValue("id_token")
+
 	// Write the session id and redirect to /
-	client := g.oauthConfig.Client(context.Background(), &oauth2.Token{})
+	client := g.oauthConfig.Client(oauth2.NoContext, &oauth2.Token{AccessToken: accessToken})
 	service, err := oauth2api.New(client)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -94,12 +95,26 @@ func (g *GoogleHandler) HandleVerifyToken(w http.ResponseWriter, r *http.Request
 	tokenCall.AccessToken(accessToken)
 	tokenCall.IdToken(idToken)
 	tokenInfo, err := tokenCall.Do()
-	g.logger.Info(fmt.Sprintf("%#v", tokenInfo))
+	g.logger.Info("verify token", zap.String("user_id", tokenInfo.UserId))
 	if err != nil {
 		g.logger.Error(err.Error())
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	http.Error(w, "", http.StatusOK)
+	db := NewDB("orgo", "orgo.db")
+	defer db.Close()
+
+	key := fmt.Sprintf("%s:access_key_login", tokenInfo.UserId)
+	if err := db.Put([]byte(key), []byte(accessToken)); err != nil {
+		g.logger.Error(err.Error())
+		http.Error(w, "save code", http.StatusBadRequest)
+		return
+	}
+
+	if accountId == tokenInfo.UserId {
+		http.Error(w, "ok", http.StatusOK)
+	} else {
+		http.Error(w, "not authorized", http.StatusForbidden)
+	}
 }

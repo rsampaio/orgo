@@ -45,24 +45,6 @@
 			"revisionTime": "2016-08-30T20:29:57Z"
 		},
 		{
-			"checksumSHA1": "g/V4qrXjUGG9B+e3hB+4NAYJ5Gs=",
-			"path": "github.com/gorilla/context",
-			"revision": "08b5f424b9271eedf6f9f0ce86cb9396ed337a42",
-			"revisionTime": "2016-08-17T18:46:32Z"
-		},
-		{
-			"checksumSHA1": "veX5bpYOBjZZWMyWxXxys8EH9d8=",
-			"path": "github.com/gorilla/securecookie",
-			"revision": "fa5329f913702981df43dcb2a380bac429c810b5",
-			"revisionTime": "2016-10-03T05:16:01Z"
-		},
-		{
-			"checksumSHA1": "f1dfF3vmO95G/hbwMYlFru/FfMo=",
-			"path": "github.com/gorilla/sessions",
-			"revision": "ca9ada44574153444b00d3fd9c8559e4cc95f896",
-			"revisionTime": "2016-09-22T14:58:04Z"
-		},
-		{
 			"checksumSHA1": "veqG9LMm259hz95gY5xDx3QEcBE=",
 			"path": "github.com/joeshaw/envdecode",
 			"revision": "32118ea5f56d5358408e78d150be1843a695e35c",

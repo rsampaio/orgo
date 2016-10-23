@@ -1,5 +1,17 @@
 var account_id;
 
+// http://stackoverflow.com/a/18652401
+function setCookie(key, value) {
+  var expires = new Date();
+  expires.setTime(expires.getTime() + (1 * 24 * 60 * 60 * 1000));
+  document.cookie = key + '=' + value + ';expires=' + expires.toUTCString();
+}
+
+function getCookie(key) {
+  var keyValue = document.cookie.match('(^|;) ?' + key + '=([^;]*)(;|$)');
+  return keyValue ? keyValue[2] : null;
+}
+
 function onSignIn() {
   var auth2 = gapi.auth2.getAuthInstance();
 }
@@ -36,16 +48,23 @@ function startApp() {
         access_token = auth2.currentUser.get().getAuthResponse().access_token;
         id_token = auth2.currentUser.get().getAuthResponse().id_token;
         console.log("account authenticated: " + account_id);
-        console.log(access_token)
+        console.log(access_token);
 
         $('#google-logout').text("Sign-out");
+        $.post("/google/verify_token",
+               {
+                 account_id: account_id,
+                 access_token: access_token,
+                 id_token: id_token
+               },
+               function(data) {
+                 console.log(data);
+               });
 
       } else {
         console.log("not authenticated");
         $('#google-logout').text("");
-
       }
-      $.post("/google/verify_token", {account_id: account_id, access_token: access_token, id_token: id_token}, function(data) {console.log(data)});
     });
   });
 }
