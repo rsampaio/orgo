@@ -1,15 +1,13 @@
 var account_id;
 
 // http://stackoverflow.com/a/18652401
-function setCookie(key, value) {
-  var expires = new Date();
-  expires.setTime(expires.getTime() + (1 * 24 * 60 * 60 * 1000));
-  document.cookie = key + '=' + value + ';expires=' + expires.toUTCString();
-}
-
 function getCookie(key) {
   var keyValue = document.cookie.match('(^|;) ?' + key + '=([^;]*)(;|$)');
   return keyValue ? keyValue[2] : null;
+}
+
+function deleteCookie( name ) {
+  document.cookie = name + '=; expires=Thu, 01 Jan 1970 00:00:01 GMT;';
 }
 
 function onSignIn() {
@@ -21,6 +19,7 @@ function signOut() {
   auth2.signOut().then(function () {
     console.log('User signed out.');
   });
+  deleteCookie("orgo-session");
 }
 
 function startApp() {
@@ -51,16 +50,19 @@ function startApp() {
         console.log(access_token);
 
         $('#google-logout').text("Sign-out");
-        $.post("/google/verify_token",
-               {
-                 account_id: account_id,
-                 access_token: access_token,
-                 id_token: id_token
-               },
-               function(data) {
-                 console.log(data);
-               });
 
+        session = getCookie("orgo-session");
+        if (session == null) {
+          $.post("/google/verify_token",
+                 {
+                   account_id: account_id,
+                   access_token: access_token,
+                   id_token: id_token
+                 },
+                 function(data) {
+                   console.log(data);
+                 });
+        }
       } else {
         console.log("not authenticated");
         $('#google-logout').text("");

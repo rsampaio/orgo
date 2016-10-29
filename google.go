@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/gorilla/sessions"
 	uuid "github.com/satori/go.uuid"
 	"github.com/uber-go/zap"
 	"golang.org/x/oauth2"
@@ -15,10 +16,12 @@ import (
 type GoogleHandler struct {
 	oauthConfig *oauth2.Config
 	logger      zap.Logger
+	store       *sessions.CookieStore
 }
 
-func NewGoogleHandler(apiKey, apiSecret, redirectURL string) *GoogleHandler {
+func NewGoogleHandler(apiKey, apiSecret, redirectURL string, store *sessions.CookieStore) *GoogleHandler {
 	return &GoogleHandler{
+		store:  store,
 		logger: zap.New(zap.NewTextEncoder()),
 		oauthConfig: &oauth2.Config{
 			ClientID:     apiKey,
@@ -113,6 +116,13 @@ func (g *GoogleHandler) HandleVerifyToken(w http.ResponseWriter, r *http.Request
 	}
 
 	if accountId == tokenInfo.UserId {
+		session, err := g.store.Get(r, "orgo-session")
+		if err != nil {
+			g.logger.Error(err.Error())
+		}
+
+		session.Values["session_id"] = uuid.NewV4().String()
+		session.Save(r, w)
 		http.Error(w, "ok", http.StatusOK)
 	} else {
 		http.Error(w, "not authorized", http.StatusForbidden)
