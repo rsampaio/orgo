@@ -18,8 +18,9 @@ type OrgEntry struct {
 
 func Process(accountID string, errChan chan error) {
 	logger := zap.New(zap.NewTextEncoder())
-	db := NewDB("orgo", "orgo.db")
-	key, _ := db.Get([]byte(accountID))
+
+	db := NewDB("orgo.db")
+	key := db.GetToken("dropbox")
 	logger.Info("processing", zap.String("account_id", accountID))
 
 	dbxCfg := dropbox.Config{Token: string(key)}

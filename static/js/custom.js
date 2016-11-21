@@ -10,8 +10,14 @@ function deleteCookie( name ) {
   document.cookie = name + '=; expires=Thu, 01 Jan 1970 00:00:01 GMT;';
 }
 
-function onSignIn() {
-  var auth2 = gapi.auth2.getAuthInstance();
+function onSignIn(authRequest) {
+  $.post("/google/oauth", {code: authRequest.code},
+         function(data, statusText, request) {
+           console.log(statusText);
+           if (statusText == 'success') {
+             window.location = '/';
+           }
+         });
 }
 
 function signOut() {
@@ -20,6 +26,7 @@ function signOut() {
     console.log('User signed out.');
   });
   deleteCookie("orgo-session");
+  window.location = '/';
 }
 
 function startApp() {
@@ -34,20 +41,23 @@ function startApp() {
         'width': 240,
         'height': 50,
         'longtitle': true,
-        'theme': 'dark',
-        'onsuccess': onSignIn
+        'theme': 'dark'
     });
 
-    $('#google-logout').click(signOut);
+    $('#google-logout')
+      .text("Sign-out")
+      .click(signOut);
+    $('#google-login').click(function() {
+      auth2.grantOfflineAccess({redirect_uri: "postmessage"}).then(onSignIn);
+    });
 
     // Sign the user in, and then retrieve their ID.
+    /*
     auth2.isSignedIn.listen(function(signedIn) {
       if (signedIn) {
         account_id = auth2.currentUser.get().getId();
         access_token = auth2.currentUser.get().getAuthResponse().access_token;
         id_token = auth2.currentUser.get().getAuthResponse().id_token;
-        console.log("account authenticated: " + account_id);
-        console.log(access_token);
 
         $('#google-logout').text("Sign-out");
 
@@ -59,8 +69,8 @@ function startApp() {
                    access_token: access_token,
                    id_token: id_token
                  },
-                 function(data) {
-                   console.log(data);
+                 function(data, url, request) {
+                   console.log(request);
                  });
         }
       } else {
@@ -68,5 +78,6 @@ function startApp() {
         $('#google-logout').text("");
       }
     });
+    */
   });
 }

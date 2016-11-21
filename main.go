@@ -43,7 +43,6 @@ func main() {
 	http.HandleFunc("/dropbox/webhook", dropboxHandler.HandleWebhook)
 	http.HandleFunc("/dropbox/oauth", dropboxHandler.HandleOauthCallback)
 	http.HandleFunc("/google/oauth", googleHandler.HandleGoogleOauthCallback)
-	http.HandleFunc("/google/verify_token", googleHandler.HandleVerifyToken)
 	fs := http.FileServer(http.Dir("static"))
 	http.Handle("/static/", http.StripPrefix("/static/", fs))
 	templateHandler := http.HandlerFunc(webHandler.HandleTemplates)

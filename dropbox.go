@@ -35,6 +35,7 @@ type DropboxHandler struct {
 	oauthConfig *oauth2.Config
 	workChan    chan string
 	logger      zap.Logger
+	db          *DB
 }
 
 func NewDropboxHandler(apiKey string, apiSecret string, redirectURL string, workChan chan string) *DropboxHandler {
@@ -47,7 +48,8 @@ func NewDropboxHandler(apiKey string, apiSecret string, redirectURL string, work
 			TokenURL: "https://api.dropbox.com/1/oauth2/token",
 		},
 	}
-	return &DropboxHandler{logger: zap.New(zap.NewTextEncoder()), oauthConfig: oauthConfig, workChan: workChan}
+
+	return &DropboxHandler{logger: zap.New(zap.NewTextEncoder()), oauthConfig: oauthConfig, workChan: workChan, db: NewDB("orgo.db")}
 }
 
 func (h *DropboxHandler) AuthCodeURL() string {
@@ -81,13 +83,10 @@ func (h *DropboxHandler) HandleOauthCallback(w http.ResponseWriter, r *http.Requ
 
 	uid := tok.Extra("account_id").(string)
 	token := tok.AccessToken
-	db := NewDB("orgo", "orgo.db")
-	if err := db.Put([]byte(uid), []byte(token)); err != nil {
-		h.logger.Error(err.Error())
-		http.Error(w, "save token", http.StatusBadRequest)
-	}
 
-	db.Close()
+	// TODO: save dropbox token
+	h.db.SaveToken("dropbox", uid, code, token)
+
 	h.logger.Info("redirect",
 		zap.String("uid", tok.Extra("uid").(string)),
 		zap.String("account_id", tok.Extra("account_id").(string)))

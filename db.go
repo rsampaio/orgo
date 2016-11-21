@@ -1,43 +1,58 @@
 package main
 
 import (
-	"github.com/boltdb/bolt"
+	"database/sql"
+
+	_ "github.com/mattn/go-sqlite3"
 )
 
 type DB struct {
-	handle *bolt.DB
-	bucket []byte
+	handle *sql.DB
 }
 
-func NewDB(bucket string, file string) *DB {
-	db, err := bolt.Open(file, 0666, nil)
+func NewDB(file string) *DB {
+	db, err := sql.Open("sqlite3", file)
 	if err != nil {
 		return nil
 	}
-	return &DB{handle: db, bucket: []byte(bucket)}
+	return &DB{handle: db}
 }
 
-func (d *DB) Get(key []byte) ([]byte, error) {
-	var result []byte
-	err := d.handle.View(func(tx *bolt.Tx) error {
-		result = tx.Bucket(d.bucket).Get(key)
-		return nil
-	})
+func (d *DB) createTables() error {
+	_, err := d.handle.Exec(`
+    create table user (
+        email           text,
+        token_id        integer
+    );
+
+    create table tokens (
+        id       integer primary key autoincrement,
+        provider text,
+        account  text,
+        code     text,
+        token    text
+    );
+
+	create table events (
+        email text,
+        due   datetime,
+        title text,
+        state text,
+        body  text);`)
+
 	if err != nil {
-		return []byte(""), err
+		return err
 	}
 
-	return result, nil
+	return nil
 }
 
-func (d *DB) Put(key []byte, value []byte) error {
-	return d.handle.Update(func(tx *bolt.Tx) error {
-		b, err := tx.CreateBucketIfNotExists(d.bucket)
-		if err != nil {
-			return err
-		}
-		return b.Put(key, value)
-	})
+func (d *DB) SaveToken(provider, account, code, token string) {
+
+}
+
+func (d *DB) GetToken(provider string) string {
+	return ""
 }
 
 func (d *DB) Close() error {

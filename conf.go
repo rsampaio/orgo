@@ -11,6 +11,6 @@ type Config struct {
 	Google struct {
 		ApiKey      string `env:"GOOGLE_API_KEY,required"`
 		ApiSecret   string `env:"GOOGLE_API_SECRET,required"`
-		RedirectURL string `env:"GOOGLE_REDIRECT_URL,default=https://orgo.rsampaio.info/google/oauth"`
+		RedirectURL string `env:"GOOGLE_REDIRECT_URL,default=postmessage"`
 	}
 }
