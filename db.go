@@ -47,12 +47,35 @@ func (d *DB) createTables() error {
 	return nil
 }
 
-func (d *DB) SaveToken(provider, account, code, token string) {
+func (d *DB) SaveToken(provider, account, code, token string) error {
+	tx, err := d.handle.Begin()
+	if err != nil {
+		return err
+	}
 
+	stmt, err := tx.Prepare("insert into tokens(provider, account, code, token) values(?, ?, ?, ?)")
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+
+	if _, err := stmt.Exec(provider, account, code, token); err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	tx.Commit()
+	return nil
 }
 
-func (d *DB) GetToken(provider string) string {
-	return ""
+func (d *DB) GetToken(provider string) (string, error) {
+	var token string
+	err := d.handle.QueryRow("select token from tokens where provider=?", provider).Scan(token)
+	if err != nil {
+		return "", err
+	}
+
+	return token, nil
 }
 
 func (d *DB) Close() error {

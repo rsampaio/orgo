@@ -20,7 +20,12 @@ func Process(accountID string, errChan chan error) {
 	logger := zap.New(zap.NewTextEncoder())
 
 	db := NewDB("orgo.db")
-	key := db.GetToken("dropbox")
+	key, err := db.GetToken("dropbox")
+	if err != nil {
+		logger.Error(err.Error())
+		return
+	}
+
 	logger.Info("processing", zap.String("account_id", accountID))
 
 	dbxCfg := dropbox.Config{Token: string(key)}

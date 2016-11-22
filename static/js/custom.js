@@ -47,6 +47,7 @@ function startApp() {
     $('#google-logout')
       .text("Sign-out")
       .click(signOut);
+
     $('#google-login').click(function() {
       auth2.grantOfflineAccess({redirect_uri: "postmessage"}).then(onSignIn);
     });
