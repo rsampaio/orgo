@@ -37,13 +37,6 @@ function startApp() {
       scope: "profile email https://www.googleapis.com/auth/calendar"
     });
 
-    gapi.signin2.render('google-login', {
-        'width': 240,
-        'height': 50,
-        'longtitle': true,
-        'theme': 'dark'
-    });
-
     $('#google-logout')
       .text("Sign-out")
       .click(signOut);

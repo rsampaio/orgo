@@ -71,7 +71,8 @@ func (g *GoogleHandler) HandleGoogleOauthCallback(w http.ResponseWriter, r *http
 		g.logger.Error(err.Error())
 	}
 
-	session.Values["session_id"] = uuid.NewV4().String()
+	sessionID, _ := g.db.SaveSession(tokenInfo.UserId)
+	session.Values["session_id"] = sessionID
 	session.Save(r, w)
 	http.Error(w, "ok", http.StatusOK)
 }

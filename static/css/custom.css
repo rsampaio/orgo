@@ -1,12 +1,5 @@
 
 /* Custom */
-#google-login{
-  width: 100%;
-}
-
-#google-login > div{
-  margin: 0 auto;
-}
 
 .logged {
   padding: 3rem 1.5rem;

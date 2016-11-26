@@ -11,6 +11,7 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/gorilla/sessions"
 	"github.com/uber-go/zap"
 	"golang.org/x/oauth2"
 )
@@ -36,9 +37,10 @@ type DropboxHandler struct {
 	workChan    chan string
 	logger      zap.Logger
 	db          *DB
+	store       *sessions.CookieStore
 }
 
-func NewDropboxHandler(apiKey string, apiSecret string, redirectURL string, workChan chan string) *DropboxHandler {
+func NewDropboxHandler(apiKey string, apiSecret string, redirectURL string, workChan chan string, store *sessions.CookieStore) *DropboxHandler {
 	oauthConfig := &oauth2.Config{
 		ClientID:     apiKey,
 		ClientSecret: apiSecret,
@@ -49,7 +51,7 @@ func NewDropboxHandler(apiKey string, apiSecret string, redirectURL string, work
 		},
 	}
 
-	return &DropboxHandler{logger: zap.New(zap.NewTextEncoder()), oauthConfig: oauthConfig, workChan: workChan, db: NewDB("orgo.db")}
+	return &DropboxHandler{logger: zap.New(zap.NewTextEncoder()), oauthConfig: oauthConfig, workChan: workChan, db: NewDB("orgo.db"), store: store}
 }
 
 func (h *DropboxHandler) AuthCodeURL() string {
@@ -84,11 +86,30 @@ func (h *DropboxHandler) HandleOauthCallback(w http.ResponseWriter, r *http.Requ
 	uid := tok.Extra("account_id").(string)
 	token := tok.AccessToken
 
-	// TODO: save dropbox token
+	// save dropbox token
 	h.db.SaveToken("dropbox", uid, code, token)
+	session, err := h.store.Get(r, "orgo-session")
+	if err != nil {
+		h.logger.Error("get session", zap.String("error", err.Error()))
+		return
+	}
+
+	sessionID := session.Values["session_id"].(string)
+	userID, err := h.db.GetSession(sessionID)
+	if err != nil {
+		h.logger.Error(err.Error())
+	}
+
+	err = h.db.SaveGoogleDropbox(userID, tok.Extra("uid").(string))
+	if err != nil {
+		h.logger.Error("save google dropbox", zap.String("error", err.Error()))
+		return
+	}
 
 	h.logger.Info("redirect",
 		zap.String("uid", tok.Extra("uid").(string)),
+		zap.String("session_id", sessionID),
+		zap.String("google_id", userID),
 		zap.String("account_id", tok.Extra("account_id").(string)))
 	http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
 }

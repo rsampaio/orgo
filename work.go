@@ -20,7 +20,7 @@ func Process(accountID string, errChan chan error) {
 	logger := zap.New(zap.NewTextEncoder())
 
 	db := NewDB("orgo.db")
-	key, err := db.GetToken("dropbox")
+	key, err := db.GetToken("dropbox", accountID)
 	if err != nil {
 		logger.Error(err.Error())
 		return
@@ -66,6 +66,8 @@ func Process(accountID string, errChan chan error) {
 		}
 
 		for _, e := range entries {
+
+			// TODO: Save tasks to google calendar
 			logger.Info(fmt.Sprintf("%#v", e))
 		}
 	}

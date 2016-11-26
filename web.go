@@ -16,10 +16,11 @@ type WebHandler struct {
 	ctx    context.Context
 	logger zap.Logger
 	store  *sessions.CookieStore
+	db     *DB
 }
 
 func NewWebHandler(ctx context.Context, store *sessions.CookieStore) *WebHandler {
-	return &WebHandler{logger: zap.New(zap.NewTextEncoder()), ctx: ctx, store: store}
+	return &WebHandler{logger: zap.New(zap.NewTextEncoder()), ctx: ctx, store: store, db: NewDB("orgo.db")}
 }
 
 // HandleIndex wrap requests to protected resources
@@ -27,8 +28,20 @@ func (h *WebHandler) IndexMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		session, _ := h.store.Get(r, "orgo-session")
 		if ok := session.Values["session_id"]; ok != nil {
-			h.logger.Info("session id", zap.String("session_id", session.Values["session_id"].(string)))
-			r.URL.Path = "/logged.html"
+			h.logger.Info("session",
+				zap.String("session_id", session.Values["session_id"].(string)))
+			if userID, err := h.db.GetSession(session.Values["session_id"].(string)); err == nil {
+				h.logger.Info("session",
+					zap.String("user_id", userID))
+				_, err := h.db.GetDropboxId(userID)
+				if err != nil {
+					r.URL.Path = "/dropbox.html"
+				} else {
+					r.URL.Path = "/logged.html"
+				}
+			} else {
+				r.URL.Path = "/error.html"
+			}
 		} else {
 			r.URL.Path = "/"
 		}
@@ -59,6 +72,8 @@ func (h *WebHandler) HandleTemplates(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "not found", http.StatusNotFound)
 		return
 	}
+
+	templateOptions = h.ctx.Value("Urls").(map[string]string)
 
 	tmpl, err := template.ParseFiles(layout, bodyTmpl)
 	if err != nil {

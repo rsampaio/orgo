@@ -28,7 +28,7 @@ func main() {
 	workChan := make(chan string, 100)
 	go WaitWork(workChan)
 
-	dropboxHandler := NewDropboxHandler(cfg.Dropbox.ApiKey, cfg.Dropbox.ApiSecret, cfg.Dropbox.RedirectURL, workChan)
+	dropboxHandler := NewDropboxHandler(cfg.Dropbox.ApiKey, cfg.Dropbox.ApiSecret, cfg.Dropbox.RedirectURL, workChan, store)
 	googleHandler := NewGoogleHandler(cfg.Google.ApiKey, cfg.Google.ApiSecret, cfg.Google.RedirectURL, store)
 
 	urls = map[string]string{

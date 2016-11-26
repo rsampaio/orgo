@@ -4,11 +4,15 @@ create table user (
 );
 
 create table tokens (
-    id       integer primary key autoincrement,
-    provider text,
     account  text unique,
+    provider text,
     code     text,
     token    text
+);
+
+create table map_google_dropbox (
+    google_id text,
+    dropbox_id  text
 );
 
 create table events (
@@ -17,4 +21,9 @@ create table events (
     title text,
     state text,
     body  text
+);
+
+create table sessions (
+    sid     text primary key,
+    account text
 );
