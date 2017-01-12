@@ -59,11 +59,14 @@ func (h *DropboxHandler) AuthCodeURL() string {
 }
 
 func (h *DropboxHandler) verifyRequest(r *http.Request) (bytes.Buffer, error) {
-	var buf bytes.Buffer
-	signature := r.Header.Get("X-Dropbox-Signature")
-	mac := hmac.New(sha256.New, []byte(h.oauthConfig.ClientSecret))
+	var (
+		buf         bytes.Buffer
+		signature   = r.Header.Get("X-Dropbox-Signature")
+		mac         = hmac.New(sha256.New, []byte(h.oauthConfig.ClientSecret))
+		expectedMac = mac.Sum(nil)
+	)
+
 	io.Copy(mac, io.TeeReader(r.Body, &buf))
-	expectedMac := mac.Sum(nil)
 	actualMac, err := hex.DecodeString(signature)
 	if err != nil {
 		h.logger.Error("decode signature error", zap.String("msg", err.Error()))
@@ -71,13 +74,17 @@ func (h *DropboxHandler) verifyRequest(r *http.Request) (bytes.Buffer, error) {
 	}
 
 	if !hmac.Equal(actualMac, expectedMac) {
+		h.logger.Error(fmt.Sprintf("expected mac: %s, body: %s", hex.EncodeToString(expectedMac), buf.String()))
 		return bytes.Buffer{}, &SignatureMismatchErr{}
 	}
 	return buf, nil
 }
 
 func (h *DropboxHandler) HandleOauthCallback(w http.ResponseWriter, r *http.Request) {
-	code := r.FormValue("code")
+	var (
+		code = r.FormValue("code")
+	)
+
 	tok, err := h.oauthConfig.Exchange(context.Background(), code)
 	if err != nil {
 		http.Error(w, "token exchange failed", http.StatusBadRequest)
@@ -131,8 +138,12 @@ func (h *DropboxHandler) HandleWebhook(w http.ResponseWriter, r *http.Request) {
 				//go Process(account)
 				h.workChan <- account
 			}
+
+			http.Error(w, "", http.StatusOK)
+
+		} else {
+			http.Error(w, "", http.StatusForbidden)
 		}
 
-		http.Error(w, "", http.StatusOK)
 	}
 }

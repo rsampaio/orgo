@@ -60,6 +60,18 @@ func (d *DB) SaveSession(userID string) (string, error) {
 	return sessionID, nil
 }
 
+func (d *DB) GetSession(sessionID string) (string, error) {
+	var userID string
+
+	err := d.handle.QueryRow("select account from sessions where sid=?", sessionID).Scan(&userID)
+	if err != nil {
+		d.logger.Error(err.Error())
+		return "", err
+	}
+
+	return userID, nil
+}
+
 func (d *DB) SaveGoogleDropbox(googleID, dropboxID string) error {
 	tx, err := d.handle.Begin()
 	if err != nil {
@@ -89,18 +101,6 @@ func (d *DB) GetDropboxId(googleID string) (string, error) {
 	}
 
 	return dropboxID, nil
-}
-
-func (d *DB) GetSession(sessionID string) (string, error) {
-	var userID string
-
-	err := d.handle.QueryRow("select account from sessions where sid=?", sessionID).Scan(&userID)
-	if err != nil {
-		d.logger.Error(err.Error())
-		return "", err
-	}
-
-	return userID, nil
 }
 
 func (d *DB) SaveToken(provider, account, code, token string) error {
