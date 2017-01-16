@@ -1,21 +1,24 @@
 package main
 
-import "testing"
+import (
+	"testing"
+	"time"
+)
 
 func TestDB(t *testing.T) {
 	db := NewDB("")
+	defer db.Close()
 	if db == nil || db.handle == nil {
 		t.Error("failed to open db")
+		return
 	}
 
-	t.Run("create_tables", func(t *testing.T) {
-		err := db.createTables()
-		if err != nil {
-			t.Error(err.Error())
-		}
-	})
+	err := db.createTables()
+	if err != nil {
+		t.Error(err.Error())
+	}
 
-	t.Run("session_save_get", func(t *testing.T) {
+	t.Run("SessionSaveGet", func(t *testing.T) {
 		sessionID, err := db.SaveSession("user1")
 		if err != nil {
 			t.Error(err.Error())
@@ -32,7 +35,7 @@ func TestDB(t *testing.T) {
 
 	})
 
-	t.Run("google_dropbox_map", func(t *testing.T) {
+	t.Run("GoogleDropboxMap", func(t *testing.T) {
 		err := db.SaveGoogleDropbox("google1", "dropbox1")
 		if err != nil {
 			t.Error(err.Error())
@@ -48,7 +51,7 @@ func TestDB(t *testing.T) {
 		}
 	})
 
-	t.Run("token", func(t *testing.T) {
+	t.Run("Token", func(t *testing.T) {
 		err := db.SaveToken("provider1", "account1", "abc123", "token123")
 		if err != nil {
 			t.Error(err.Error())
@@ -65,5 +68,31 @@ func TestDB(t *testing.T) {
 
 	})
 
-	db.Close()
+	t.Run("EntrySaveGet", func(t *testing.T) {
+		var (
+			ti    = time.Now()
+			entry = &OrgEntry{
+				Title:     "title",
+				Tag:       "tag",
+				Priority:  "prio",
+				Body:      []string{"body"},
+				Date:      ti,
+				Scheduled: ti,
+				Closed:    ti,
+			}
+		)
+
+		if err := db.SaveEntry(entry, "test@email.com"); err != nil {
+			t.Error(err.Error())
+		}
+
+		entry1, err := db.GetEntry("title", "test@email.com")
+		if err != nil {
+			t.Error(err.Error())
+		}
+
+		if entry1 == nil {
+			t.Error("entry is nil")
+		}
+	})
 }

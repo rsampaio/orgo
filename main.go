@@ -4,21 +4,18 @@ import (
 	"context"
 	"net/http"
 
+	log "github.com/Sirupsen/logrus"
+
 	"github.com/gorilla/sessions"
 	"github.com/joeshaw/envdecode"
-	"github.com/uber-go/zap"
 )
 
-var logger zap.Logger
-
 func main() {
-	logger = zap.New(zap.NewTextEncoder())
-
 	var cfg Config
 	var urls map[string]string
 	err := envdecode.Decode(&cfg)
 	if err != nil {
-		logger.Fatal(err.Error())
+		log.Fatal(err.Error())
 	}
 
 	ctx := context.Background()
@@ -26,7 +23,8 @@ func main() {
 
 	// Buffered work chan for async producers
 	workChan := make(chan string, 100)
-	go WaitWork(workChan)
+	calendarChan := make(chan *OrgEntry)
+	go WaitWork(workChan, calendarChan)
 
 	dropboxHandler := NewDropboxHandler(cfg.Dropbox.ApiKey, cfg.Dropbox.ApiSecret, cfg.Dropbox.RedirectURL, workChan, store)
 	googleHandler := NewGoogleHandler(cfg.Google.ApiKey, cfg.Google.ApiSecret, cfg.Google.RedirectURL, store)
@@ -48,5 +46,5 @@ func main() {
 	templateHandler := http.HandlerFunc(webHandler.HandleTemplates)
 	http.Handle("/", webHandler.IndexMiddleware(templateHandler))
 
-	logger.Fatal(http.ListenAndServe(":8080", nil).Error())
+	log.Fatal(http.ListenAndServe(":8080", nil).Error())
 }

@@ -3,9 +3,9 @@ package main
 import (
 	"net/http"
 
+	log "github.com/Sirupsen/logrus"
 	"github.com/gorilla/sessions"
 	uuid "github.com/satori/go.uuid"
-	"github.com/uber-go/zap"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 	calendar "google.golang.org/api/calendar/v3"
@@ -14,15 +14,13 @@ import (
 
 type GoogleHandler struct {
 	oauthConfig *oauth2.Config
-	logger      zap.Logger
 	store       *sessions.CookieStore
 	db          *DB
 }
 
 func NewGoogleHandler(apiKey, apiSecret, redirectURL string, store *sessions.CookieStore) *GoogleHandler {
 	return &GoogleHandler{
-		store:  store,
-		logger: zap.New(zap.NewTextEncoder()),
+		store: store,
 		oauthConfig: &oauth2.Config{
 			ClientID:     apiKey,
 			ClientSecret: apiSecret,
@@ -42,14 +40,14 @@ func (g *GoogleHandler) AuthCodeURL() string {
 func (g *GoogleHandler) HandleGoogleOauthCallback(w http.ResponseWriter, r *http.Request) {
 	code := r.FormValue("code")
 	if code == "" {
-		g.logger.Info("code is empty")
+		log.Info("code is empty")
 		http.Error(w, "code is empty", http.StatusBadRequest)
 		return
 	}
 
 	tok, err := g.oauthConfig.Exchange(oauth2.NoContext, code)
 	if err != nil {
-		g.logger.Error(err.Error())
+		log.Error(err.Error())
 		http.Error(w, "token exchange failed", http.StatusBadRequest)
 		return
 	}
@@ -60,7 +58,7 @@ func (g *GoogleHandler) HandleGoogleOauthCallback(w http.ResponseWriter, r *http
 	tokenCall.AccessToken(tok.AccessToken)
 	tokenInfo, _ := tokenCall.Do()
 
-	g.logger.Info("google user id", zap.String("user_id", tokenInfo.UserId))
+	log.Info("google user id %s", tokenInfo.UserId)
 
 	// TODO: save google token
 	g.db.SaveToken("google", tokenInfo.UserId, code, tok.AccessToken)
@@ -68,7 +66,7 @@ func (g *GoogleHandler) HandleGoogleOauthCallback(w http.ResponseWriter, r *http
 	// Session
 	session, err := g.store.Get(r, "orgo-session")
 	if err != nil {
-		g.logger.Error(err.Error())
+		log.Error(err.Error())
 	}
 
 	sessionID, _ := g.db.SaveSession(tokenInfo.UserId)

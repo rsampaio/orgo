@@ -8,19 +8,19 @@ import (
 	"os"
 	"path"
 
+	log "github.com/Sirupsen/logrus"
+
 	"github.com/gorilla/sessions"
-	"github.com/uber-go/zap"
 )
 
 type WebHandler struct {
-	ctx    context.Context
-	logger zap.Logger
-	store  *sessions.CookieStore
-	db     *DB
+	ctx   context.Context
+	store *sessions.CookieStore
+	db    *DB
 }
 
 func NewWebHandler(ctx context.Context, store *sessions.CookieStore) *WebHandler {
-	return &WebHandler{logger: zap.New(zap.NewTextEncoder()), ctx: ctx, store: store, db: NewDB("orgo.db")}
+	return &WebHandler{ctx: ctx, store: store, db: NewDB("orgo.db")}
 }
 
 // HandleIndex wrap requests to protected resources
@@ -28,11 +28,9 @@ func (h *WebHandler) IndexMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		session, _ := h.store.Get(r, "orgo-session")
 		if ok := session.Values["session_id"]; ok != nil {
-			h.logger.Info("session",
-				zap.String("session_id", session.Values["session_id"].(string)))
+			h.logger.Info("session", session.Values["session_id"].(string))
 			if userID, err := h.db.GetSession(session.Values["session_id"].(string)); err == nil {
-				h.logger.Info("session",
-					zap.String("user_id", userID))
+				log.Info("session", userID)
 				_, err := h.db.GetDropboxId(userID)
 				if err != nil {
 					r.URL.Path = "/dropbox.html"

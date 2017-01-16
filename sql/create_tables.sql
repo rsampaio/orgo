@@ -1,4 +1,5 @@
-create table user (
+create table users (
+    id              integer primary key autoincrement,
     email           text,
     token_id        integer
 );
@@ -11,16 +12,19 @@ create table tokens (
 );
 
 create table map_google_dropbox (
-    google_id text,
-    dropbox_id  text
+    google_id  text,
+    dropbox_id text
 );
 
-create table events (
-    email text,
-    due   datetime,
-    title text,
-    state text,
-    body  text
+create table entries (
+    email         text,
+    title         text unique,
+    tag           text,
+    priority      text,
+    body          text,
+    create_date   datetime,
+    scheduled     datetime,
+    closed        datetime
 );
 
 create table sessions (

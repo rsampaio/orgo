@@ -3,15 +3,31 @@ package main
 import (
 	"database/sql"
 	"io/ioutil"
+	"strings"
+	"time"
 
+	log "github.com/Sirupsen/logrus"
 	_ "github.com/mattn/go-sqlite3"
 	uuid "github.com/satori/go.uuid"
-	"github.com/uber-go/zap"
 )
 
 type DB struct {
 	handle *sql.DB
-	logger zap.Logger
+}
+
+// ** [TAG [#PRIORITY]] Title
+//    SCHEDULED:value CLOSED:value
+//    body
+//    body
+//    [date]
+type OrgEntry struct {
+	Title     string
+	Tag       string
+	Priority  string
+	Body      []string
+	Date      time.Time
+	Scheduled time.Time
+	Closed    time.Time
 }
 
 func NewDB(file string) *DB {
@@ -19,7 +35,7 @@ func NewDB(file string) *DB {
 	if err != nil {
 		return nil
 	}
-	return &DB{handle: db, logger: zap.New(zap.NewTextEncoder())}
+	return &DB{handle: db}
 }
 
 func (d *DB) createTables() error {
@@ -53,7 +69,7 @@ func (d *DB) SaveSession(userID string) (string, error) {
 
 	if _, err := stmt.Exec(sessionID, userID); err != nil {
 		tx.Rollback()
-		d.logger.Error("save session", zap.String("error", err.Error()))
+		log.Error("save session", err.Error())
 		return "", err
 	}
 	tx.Commit()
@@ -65,7 +81,7 @@ func (d *DB) GetSession(sessionID string) (string, error) {
 
 	err := d.handle.QueryRow("select account from sessions where sid=?", sessionID).Scan(&userID)
 	if err != nil {
-		d.logger.Error(err.Error())
+		log.Error(err.Error())
 		return "", err
 	}
 
@@ -96,7 +112,7 @@ func (d *DB) GetDropboxId(googleID string) (string, error) {
 
 	err := d.handle.QueryRow("select dropbox_id from map_google_dropbox where google_id=?", googleID).Scan(&dropboxID)
 	if err != nil {
-		d.logger.Error("get dropbox id", zap.String("error", err.Error()))
+		log.Error("get dropbox id", err.Error())
 		return "", err
 	}
 
@@ -132,6 +148,58 @@ func (d *DB) GetToken(provider, account string) (string, error) {
 	}
 
 	return token, nil
+}
+
+func (d *DB) GetEntry(title, email string) (*OrgEntry, error) {
+	var (
+		entry OrgEntry
+		body  string
+	)
+
+	err := d.handle.QueryRow("select title, tag, priority, body, create_date, scheduled, closed from entries where title=? and email=?", title, email).Scan(
+		&entry.Title,
+		&entry.Tag,
+		&entry.Priority,
+		&body,
+		&entry.Date,
+		&entry.Scheduled,
+		&entry.Closed,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	entry.Body = strings.Split(body, "\n")
+	return &entry, nil
+}
+
+func (d *DB) SaveEntry(entry *OrgEntry, email string) error {
+	tx, err := d.handle.Begin()
+	if err != nil {
+		return err
+	}
+
+	stmt, err := tx.Prepare("insert into entries(email, title, tag, priority, body, create_date, scheduled, closed) values(?, ?, ?, ?, ?, ?, ?, ?)")
+	if err != nil {
+		return err
+	}
+
+	if _, err := stmt.Exec(
+		email,
+		entry.Title,
+		entry.Tag,
+		entry.Priority,
+		strings.Join(entry.Body, "\n"),
+		entry.Date,
+		entry.Scheduled,
+		entry.Closed,
+	); err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	tx.Commit()
+	return nil
 }
 
 func (d *DB) Close() error {

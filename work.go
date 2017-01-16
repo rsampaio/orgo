@@ -6,42 +6,30 @@ import (
 	"strings"
 	"time"
 
+	log "github.com/Sirupsen/logrus"
+
 	"github.com/dropbox/dropbox-sdk-go-unofficial/dropbox"
 	"github.com/dropbox/dropbox-sdk-go-unofficial/dropbox/files"
-	"github.com/uber-go/zap"
 )
 
 // TODO read from envvar
 var location *time.Location
 
-// ** [TAG [#PRIORITY]] Title
-//    SCHEDULED:value CLOSED:value
-//    body
-//    body
-//    [date]
-type OrgEntry struct {
-	Title     string
-	Tag       string
-	Priority  string
-	Body      []string
-	Date      time.Time
-	Scheduled time.Time
-	Closed    time.Time
-}
-
+// Process org file from dropbox account
+// this should generate entries and update
+// the local database to reflect the file in dropbox
 func Process(accountID string, errChan chan error) {
-	logger := zap.New(zap.NewTextEncoder())
-
 	location, _ = time.LoadLocation("America/Los_Angeles")
 
 	db := NewDB("orgo.db")
+	defer db.Close()
 	key, err := db.GetToken("dropbox", accountID)
 	if err != nil {
-		logger.Error(err.Error())
+		log.Error(err.Error())
 		return
 	}
 
-	logger.Info("processing", zap.String("account_id", accountID))
+	log.Info("processing %s account", accountID)
 
 	dbxCfg := dropbox.Config{Token: string(key)}
 	dbx := files.New(dbxCfg)
@@ -49,26 +37,33 @@ func Process(accountID string, errChan chan error) {
 	listFolderArg := files.NewListFolderArg("")
 	folderRes, err := dbx.ListFolder(listFolderArg)
 	if err != nil {
-		logger.Error(err.Error())
+		log.Error(err.Error())
 		errChan <- err
 	}
 
 	for _, entry := range folderRes.Entries {
-		logger.Info("file", zap.String("name", entry.(*files.FileMetadata).Metadata.Name))
+		log.Infof("file %s", entry.(*files.FileMetadata).Metadata.Name)
 		_, reader, err := dbx.Download(&files.DownloadArg{Path: entry.(*files.FileMetadata).Metadata.PathLower})
 		if err != nil {
-			logger.Error(err.Error())
+			log.Error(err.Error())
 			errChan <- err
 		}
 
-		content, _ := ioutil.ReadAll(reader)
+		content, err := ioutil.ReadAll(reader)
+		if err != nil {
+			errChan <- err
+		}
+
 		entries := ParseEntries(content)
 		for i, e := range entries {
-			// TODO: Save tasks to google calendar
-			logger.Info(fmt.Sprintf("%d %#q", i, e))
+			// TODO: Save entry to db or update
+			log.Info(fmt.Sprintf("%d %#q", i, e))
 		}
 	}
-	db.Close()
+}
+
+func Calendar(entry *OrgEntry) {
+	log.Info(fmt.Sprintf("calendar: %#v\n", entry))
 }
 
 func ParseEntries(content []byte) []*OrgEntry {
@@ -112,14 +107,16 @@ func ParseEntries(content []byte) []*OrgEntry {
 	return entries
 }
 
-func WaitWork(workChan <-chan string) {
+func WaitWork(workChan <-chan string, calendarChan <-chan *OrgEntry) {
 	var errChan chan error
 	for {
 		select {
+		case entry := <-calendarChan:
+			go Calendar(entry)
 		case work := <-workChan:
 			go Process(work, errChan)
 		case err := <-errChan:
-			logger.Error(err.Error())
+			log.Error(err.Error())
 		}
 	}
 }
