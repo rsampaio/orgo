@@ -56,14 +56,14 @@ func (d *DB) SaveSession(userID string) (string, error) {
 	sessionID := uuid.NewV4().String()
 	tx, err := d.handle.Begin()
 	if err != nil {
-		d.logger.Error(err.Error())
+		log.Error(err.Error())
 		return "", err
 	}
 
 	stmt, err := tx.Prepare("insert into sessions(sid, account) values(?, ?)")
 	defer stmt.Close()
 	if err != nil {
-		d.logger.Error(err.Error())
+		log.Error(err.Error())
 		return "", err
 	}
 

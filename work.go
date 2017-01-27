@@ -23,6 +23,7 @@ func Process(accountID string, errChan chan error) {
 
 	db := NewDB("orgo.db")
 	defer db.Close()
+
 	key, err := db.GetToken("dropbox", accountID)
 	if err != nil {
 		log.Error(err.Error())

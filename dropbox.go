@@ -79,7 +79,12 @@ func (h *DropboxHandler) verifyRequest(r *http.Request) (bytes.Buffer, error) {
 	}
 
 	if !hmac.Equal(actualMac, expectedMac) {
-		log.Errorf("expected mac: %s, body: %s", hex.EncodeToString(expectedMac), buf.String())
+		log.Errorf(
+			"expected mac: %s\nactual: %s\nbody: %s",
+			hex.EncodeToString(expectedMac),
+			hex.EncodeToString(actualMac),
+			buf.String(),
+		)
 		return bytes.Buffer{}, &SignatureMismatchErr{}
 	}
 	return buf, nil
@@ -128,28 +133,29 @@ func (h *DropboxHandler) HandleOauthCallback(w http.ResponseWriter, r *http.Requ
 }
 
 func (h *DropboxHandler) HandleWebhook(w http.ResponseWriter, r *http.Request) {
+	var event Event
+
 	switch r.Method {
 	case "GET":
 		log.Info("challenge request")
 		fmt.Fprint(w, r.FormValue("challenge"))
 	case "POST":
-		if body, err := h.verifyRequest(r); err == nil {
-			var event Event
-			err := json.NewDecoder(&body).Decode(&event)
-			if err != nil {
-				log.Infof("decoder error %s", err.Error())
-			}
-
-			for _, account := range event.ListFolder.Accounts {
-				//go Process(account)
-				h.workChan <- account
-			}
-
-			http.Error(w, "", http.StatusOK)
-
-		} else {
+		body, err := h.verifyRequest(r)
+		if err != nil {
 			http.Error(w, "", http.StatusForbidden)
+			return
 		}
 
+		err = json.NewDecoder(&body).Decode(&event)
+		if err != nil {
+			log.Infof("decoder error %s", err.Error())
+		}
+
+		for _, account := range event.ListFolder.Accounts {
+			//go Process(account)
+			h.workChan <- account
+		}
+
+		http.Error(w, "", http.StatusOK)
 	}
 }
