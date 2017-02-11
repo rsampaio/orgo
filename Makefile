@@ -1,4 +1,4 @@
-.PHONY: build ci default fmt imports init run test vet
+.PHONY: build ci default init test vet
 
 PKGS=$(shell go list ./... | grep -v vendor)
 CMDS=$(shell go list ./... | grep -v vendor | grep cmd)
@@ -6,7 +6,7 @@ CMDS=$(shell go list ./... | grep -v vendor | grep cmd)
 default: ci
 
 build:
-	GOBIN=$(CURDIR)/bin/ go get -v $(CMDS)
+	GOBIN=${CURDIR}/bin/ go get -v ${CMDS}
 
 init:
 	go get -u github.com/golang/dep/cmd/dep
@@ -15,15 +15,15 @@ init:
 	go get -u github.com/wadey/gocovmerge
 
 vet:
-	go vet $(PKGS)
+	go vet ${PKGS}
 
 test: vet
-	go test $(PKGS) -test.race -cover -v
+	go test ${PKGS} -test.race -cover
 
 cover:
 	@rm -rf .cover/
 	@mkdir -p .cover/
-	@for MOD in $(PKGS); do \
+	@for MOD in ${PKGS}; do \
 		go test -coverpkg=$$MOD \
 			-coverprofile=.cover/unit-`echo $$MOD|tr "/" "_"`.out \
 			$$MOD 2>&1 | grep -v "no packages being tested depend on"; \

@@ -1,5 +1,5 @@
 {
-    "memo": "",
+    "memo": "c42387f9e40fce3ebe6e9a626d03611883dc7a2138379760402f44f736b6fe9c",
     "projects": [
         {
             "name": "cloud.google.com/go",
@@ -122,8 +122,8 @@
             "branch": "master",
             "revision": "a2c54d2174c17540446e0ced57d9d459af61bc1c",
             "packages": [
-                "urlfetch",
-                "."
+                ".",
+                "urlfetch"
             ]
         }
     ]
