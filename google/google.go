@@ -1,43 +1,47 @@
-package main
+package google
 
 import (
 	"net/http"
 
 	log "github.com/Sirupsen/logrus"
-	"github.com/gorilla/sessions"
 	uuid "github.com/satori/go.uuid"
-	"golang.org/x/oauth2"
-	"golang.org/x/oauth2/google"
-	calendar "google.golang.org/api/calendar/v3"
+	orgodb "gitlab.com/rvaz/orgo/db"
 	oauth2api "google.golang.org/api/oauth2/v2"
+
+	"github.com/gorilla/sessions"
+	"golang.org/x/oauth2"
 )
 
+// GoogleHandler struct with unexported fields
 type GoogleHandler struct {
 	oauthConfig *oauth2.Config
 	store       *sessions.CookieStore
-	db          *DB
+	db          *orgodb.DB
 }
 
-func NewGoogleHandler(apiKey, apiSecret, redirectURL string, store *sessions.CookieStore) *GoogleHandler {
+// NewGoogleHandler creates an instance of GoogleHandler
+func NewGoogleHandler(oauth *oauth2.Config, store *sessions.CookieStore) *GoogleHandler {
 	return &GoogleHandler{
-		store: store,
-		oauthConfig: &oauth2.Config{
-			ClientID:     apiKey,
-			ClientSecret: apiSecret,
-			RedirectURL:  redirectURL,
-			Endpoint:     google.Endpoint,
-			Scopes:       []string{calendar.CalendarScope, oauth2api.UserinfoEmailScope, oauth2api.UserinfoProfileScope},
-		},
-		db: NewDB("orgo.db"),
+		store:       store,
+		oauthConfig: oauth,
+		db:          orgodb.NewDB("orgo.db"),
 	}
 }
+
+// AuthCodeURL returns the URL to get the authentication code
 func (g *GoogleHandler) AuthCodeURL() string {
 	return g.oauthConfig.AuthCodeURL(uuid.NewV4().String(), oauth2.AccessTypeOffline)
 }
 
-// HandleGoogleOauthCallback will receive the AuthCode from when the user authorize the app
+// ServiceGetter get a google service configured
+func (g *GoogleHandler) ServiceGetter(userID string) {
+	token, code, err := g.db.GetToken("google", userID)
+	log.Info(token, code, err)
+}
+
+// OauthHandler will receive the AuthCode from when the user authorize the app
 // with the code we should store the token_id and the code for future use and validation
-func (g *GoogleHandler) HandleGoogleOauthCallback(w http.ResponseWriter, r *http.Request) {
+func (g *GoogleHandler) OauthHandler(w http.ResponseWriter, r *http.Request) {
 	code := r.FormValue("code")
 	if code == "" {
 		log.Info("code is empty")
@@ -54,13 +58,11 @@ func (g *GoogleHandler) HandleGoogleOauthCallback(w http.ResponseWriter, r *http
 
 	client := g.oauthConfig.Client(oauth2.NoContext, &oauth2.Token{AccessToken: tok.AccessToken})
 	service, _ := oauth2api.New(client)
+
 	tokenCall := service.Tokeninfo()
 	tokenCall.AccessToken(tok.AccessToken)
 	tokenInfo, _ := tokenCall.Do()
 
-	log.Info("google user id %s", tokenInfo.UserId)
-
-	// TODO: save google token
 	g.db.SaveToken("google", tokenInfo.UserId, code, tok.AccessToken)
 
 	// Session

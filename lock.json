@@ -1,0 +1,130 @@
+{
+    "memo": "",
+    "projects": [
+        {
+            "name": "cloud.google.com/go",
+            "branch": "master",
+            "revision": "90296fd601ebfc594192e722a022663b0c3f8756",
+            "packages": [
+                "compute/metadata"
+            ]
+        },
+        {
+            "name": "github.com/Sirupsen/logrus",
+            "branch": "master",
+            "revision": "3ec0642a7fb6488f65b06f9040adc67e3990296a",
+            "packages": [
+                "."
+            ]
+        },
+        {
+            "name": "github.com/dropbox/dropbox-sdk-go-unofficial",
+            "branch": "master",
+            "revision": "6ee7ae4010cd6945bc7b2fff332752ef279a996c",
+            "packages": [
+                "dropbox",
+                "dropbox/files"
+            ]
+        },
+        {
+            "name": "github.com/golang/protobuf",
+            "branch": "master",
+            "revision": "8ee79997227bf9b34611aee7946ae64735e6fd93",
+            "packages": [
+                "proto"
+            ]
+        },
+        {
+            "name": "github.com/gorilla/context",
+            "branch": "master",
+            "revision": "08b5f424b9271eedf6f9f0ce86cb9396ed337a42",
+            "packages": [
+                "."
+            ]
+        },
+        {
+            "name": "github.com/gorilla/securecookie",
+            "branch": "master",
+            "revision": "fa5329f913702981df43dcb2a380bac429c810b5",
+            "packages": [
+                "."
+            ]
+        },
+        {
+            "name": "github.com/gorilla/sessions",
+            "branch": "master",
+            "revision": "ca9ada44574153444b00d3fd9c8559e4cc95f896",
+            "packages": [
+                "."
+            ]
+        },
+        {
+            "name": "github.com/joeshaw/envdecode",
+            "branch": "master",
+            "revision": "32118ea5f56d5358408e78d150be1843a695e35c",
+            "packages": [
+                "."
+            ]
+        },
+        {
+            "name": "github.com/mattn/go-sqlite3",
+            "branch": "master",
+            "revision": "fba66eb11643069e747022997e9be3b502b2c6fb",
+            "packages": [
+                "."
+            ]
+        },
+        {
+            "name": "github.com/satori/go.uuid",
+            "branch": "master",
+            "revision": "b061729afc07e77a8aa4fad0a2fd840958f1942a",
+            "packages": [
+                "."
+            ]
+        },
+        {
+            "name": "golang.org/x/net",
+            "branch": "master",
+            "revision": "1358eff22f0dd0c54fc521042cc607f6ff4b531a",
+            "packages": [
+                "context",
+                "context/ctxhttp"
+            ]
+        },
+        {
+            "name": "golang.org/x/oauth2",
+            "branch": "master",
+            "revision": "3c3a985cb79f52a3190fbc056984415ca6763d01",
+            "packages": [
+                ".",
+                "google"
+            ]
+        },
+        {
+            "name": "golang.org/x/sys",
+            "branch": "master",
+            "revision": "a646d33e2ee3172a661fc09bca23bb4889a41bc8",
+            "packages": [
+                "unix"
+            ]
+        },
+        {
+            "name": "google.golang.org/api",
+            "branch": "master",
+            "revision": "adba394bac5800ff2e620d040e9401528f5b7615",
+            "packages": [
+                "calendar/v3",
+                "oauth2/v2"
+            ]
+        },
+        {
+            "name": "google.golang.org/appengine",
+            "branch": "master",
+            "revision": "a2c54d2174c17540446e0ced57d9d459af61bc1c",
+            "packages": [
+                "urlfetch",
+                "."
+            ]
+        }
+    ]
+}

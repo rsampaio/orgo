@@ -17,7 +17,7 @@ create table map_google_dropbox (
 );
 
 create table entries (
-    email         text,
+    userid        text,
     title         text unique,
     tag           text,
     priority      text,

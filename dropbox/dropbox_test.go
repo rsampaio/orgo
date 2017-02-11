@@ -1,4 +1,4 @@
-package main
+package dropbox
 
 import (
 	"crypto/hmac"
@@ -12,17 +12,28 @@ import (
 	"testing"
 
 	"github.com/gorilla/sessions"
+	"golang.org/x/oauth2"
 )
 
 func TestDropbox(t *testing.T) {
 	var (
-		workChan    = make(chan string, 10)
-		store       = sessions.NewCookieStore([]byte("test-secret"))
-		testHandler = NewDropboxHandler("api123", "apiSecret123", "http://localhost", workChan, store)
+		workChan = make(chan string, 10)
+		store    = sessions.NewCookieStore([]byte("test-secret"))
+
+		dropboxOauth = &oauth2.Config{
+			ClientID:     "client-id",
+			ClientSecret: "apiSecret123",
+			RedirectURL:  "http://localhost",
+			Endpoint: oauth2.Endpoint{
+				AuthURL:  "https://www.dropbox.com/1/oauth2/authorize",
+				TokenURL: "https://api.dropbox.com/1/oauth2/token",
+			},
+		}
+		testHandler = NewDropboxHandler(dropboxOauth, workChan, store)
 	)
 
 	t.Run("dropbox_webhook_handler", func(t *testing.T) {
-		ts := httptest.NewServer(http.HandlerFunc(testHandler.HandleWebhook))
+		ts := httptest.NewServer(http.HandlerFunc(testHandler.WebhookHandler))
 		defer ts.Close()
 
 		res, err := http.Get(fmt.Sprintf("%s?challenge=challenge-value", ts.URL))
@@ -50,7 +61,7 @@ func TestDropbox(t *testing.T) {
 		actualMac := hex.EncodeToString(mac.Sum(nil))
 		fmt.Printf("test mac: %s\n", actualMac)
 
-		req.Header.Add("X-Dropbox-Signature", "3156af857870714df30ecbdc6ccb6ce48b8a8599188fb51a229f92bebe07c7b5")
+		req.Header.Add("X-Dropbox-Signature", actualMac)
 
 		res, err = client.Do(req)
 		if err != nil {
@@ -63,7 +74,7 @@ func TestDropbox(t *testing.T) {
 	})
 
 	t.Run("dropbox_oauth_handler", func(t *testing.T) {
-		ts := httptest.NewServer(http.HandlerFunc(testHandler.HandleOauthCallback))
+		ts := httptest.NewServer(http.HandlerFunc(testHandler.OauthHandler))
 		defer ts.Close()
 	})
 }

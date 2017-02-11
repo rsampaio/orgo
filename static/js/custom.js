@@ -13,7 +13,6 @@ function deleteCookie( name ) {
 function onSignIn(authRequest) {
   $.post("/google/oauth", {code: authRequest.code},
          function(data, statusText, request) {
-           console.log(statusText);
            if (statusText == 'success') {
              window.location = '/';
            }
@@ -44,34 +43,5 @@ function startApp() {
     $('#google-login').click(function() {
       auth2.grantOfflineAccess({redirect_uri: "postmessage"}).then(onSignIn);
     });
-
-    // Sign the user in, and then retrieve their ID.
-    /*
-    auth2.isSignedIn.listen(function(signedIn) {
-      if (signedIn) {
-        account_id = auth2.currentUser.get().getId();
-        access_token = auth2.currentUser.get().getAuthResponse().access_token;
-        id_token = auth2.currentUser.get().getAuthResponse().id_token;
-
-        $('#google-logout').text("Sign-out");
-
-        session = getCookie("orgo-session");
-        if (session == null) {
-          $.post("/google/verify_token",
-                 {
-                   account_id: account_id,
-                   access_token: access_token,
-                   id_token: id_token
-                 },
-                 function(data, url, request) {
-                   console.log(request);
-                 });
-        }
-      } else {
-        console.log("not authenticated");
-        $('#google-logout').text("");
-      }
-    });
-    */
   });
 }

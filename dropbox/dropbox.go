@@ -1,4 +1,4 @@
-package main
+package dropbox
 
 import (
 	"bytes"
@@ -7,16 +7,19 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 
 	log "github.com/Sirupsen/logrus"
+	orgodb "gitlab.com/rvaz/orgo/db"
 
 	"github.com/gorilla/sessions"
 	"golang.org/x/oauth2"
 )
 
+// Event struct encodes dropbox callback responses
 type Event struct {
 	ListFolder struct {
 		Accounts []string `json:"accounts"`
@@ -27,70 +30,63 @@ type Event struct {
 	} `json:"delta"`
 }
 
-type SignatureMismatchErr struct{}
+// ErrSignatureMismatch defines signature error
+var ErrSignatureMismatch = errors.New("signature mismatch error")
 
-func (s *SignatureMismatchErr) Error() string {
-	return "SignatureMismatchError"
-}
-
+// DropboxHandler struct with unexported fields
 type DropboxHandler struct {
 	oauthConfig *oauth2.Config
 	workChan    chan string
-	db          *DB
+	db          *orgodb.DB
 	store       *sessions.CookieStore
 }
 
-func NewDropboxHandler(apiKey string, apiSecret string, redirectURL string, workChan chan string, store *sessions.CookieStore) *DropboxHandler {
-	oauthConfig := &oauth2.Config{
-		ClientID:     apiKey,
-		ClientSecret: apiSecret,
-		RedirectURL:  redirectURL,
-		Endpoint: oauth2.Endpoint{
-			AuthURL:  "https://www.dropbox.com/1/oauth2/authorize",
-			TokenURL: "https://api.dropbox.com/1/oauth2/token",
-		},
-	}
-
+// NewDropboxHandler returns a new DropboxHandler
+func NewDropboxHandler(oauth *oauth2.Config, workChan chan string, store *sessions.CookieStore) *DropboxHandler {
 	return &DropboxHandler{
-		oauthConfig: oauthConfig,
+		oauthConfig: oauth,
 		workChan:    workChan,
-		db:          NewDB("orgo.db"),
+		db:          orgodb.NewDB("orgo.db"),
 		store:       store,
 	}
 }
 
+// AuthCodeURL returns the url to redirect for an authorization code
 func (h *DropboxHandler) AuthCodeURL() string {
 	return h.oauthConfig.AuthCodeURL("state-token", []oauth2.AuthCodeOption{}...)
 }
 
 func (h *DropboxHandler) verifyRequest(r *http.Request) (bytes.Buffer, error) {
 	var (
-		buf         bytes.Buffer
-		signature   = r.Header.Get("X-Dropbox-Signature")
-		mac         = hmac.New(sha256.New, []byte(h.oauthConfig.ClientSecret))
-		expectedMac = mac.Sum(nil)
+		buf       bytes.Buffer
+		signature = r.Header.Get("X-Dropbox-Signature")
+		mac       = hmac.New(sha256.New, []byte(h.oauthConfig.ClientSecret))
 	)
 
 	io.Copy(mac, io.TeeReader(r.Body, &buf))
+
+	// Calculate expected mac after writing to mac
+	expectedMac := mac.Sum(nil)
+
 	actualMac, err := hex.DecodeString(signature)
 	if err != nil {
 		log.Errorf("decode signature error %s", err.Error())
-		return bytes.Buffer{}, &SignatureMismatchErr{}
+		return bytes.Buffer{}, ErrSignatureMismatch
 	}
 
 	if !hmac.Equal(actualMac, expectedMac) {
 		log.Errorf(
-			"expected mac: %s\nactual: %s\nbody: %s",
+			"expected mac: %s got: %s",
 			hex.EncodeToString(expectedMac),
 			hex.EncodeToString(actualMac),
-			buf.String(),
 		)
-		return bytes.Buffer{}, &SignatureMismatchErr{}
+		return bytes.Buffer{}, ErrSignatureMismatch
 	}
 	return buf, nil
 }
 
-func (h *DropboxHandler) HandleOauthCallback(w http.ResponseWriter, r *http.Request) {
+// OauthHandler handles dropbox oauth calls
+func (h *DropboxHandler) OauthHandler(w http.ResponseWriter, r *http.Request) {
 	var (
 		code = r.FormValue("code")
 	)
@@ -117,7 +113,7 @@ func (h *DropboxHandler) HandleOauthCallback(w http.ResponseWriter, r *http.Requ
 		log.Error(err.Error())
 	}
 
-	err = h.db.SaveGoogleDropbox(userID, tok.Extra("uid").(string))
+	err = h.db.SaveGoogleDropbox(userID, tok.Extra("account_id").(string))
 	if err != nil {
 		log.Errorf("save google dropbox %s", err.Error())
 		return
@@ -132,7 +128,8 @@ func (h *DropboxHandler) HandleOauthCallback(w http.ResponseWriter, r *http.Requ
 	http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
 }
 
-func (h *DropboxHandler) HandleWebhook(w http.ResponseWriter, r *http.Request) {
+// WebhookHandler handles dropbok webhook events
+func (h *DropboxHandler) WebhookHandler(w http.ResponseWriter, r *http.Request) {
 	var event Event
 
 	switch r.Method {

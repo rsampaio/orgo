@@ -1,3 +1,4 @@
 bin/
 .cover/
+vendor
 orgo.db

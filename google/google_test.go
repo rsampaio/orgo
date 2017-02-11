@@ -1,9 +1,10 @@
-package main
+package google
 
 import (
 	"testing"
 
 	"github.com/gorilla/sessions"
+	"golang.org/x/oauth2"
 )
 
 func TestGoogle(t *testing.T) {
@@ -13,7 +14,12 @@ func TestGoogle(t *testing.T) {
 	)
 
 	t.Run("new_google_handler", func(t *testing.T) {
-		testHandler = NewGoogleHandler("api123", "apiSecret123", "http://localhost", store)
+		googleOauth := &oauth2.Config{
+			ClientID:     "client-id",
+			ClientSecret: "apiSecret123",
+			RedirectURL:  "http://localhost",
+		}
+		testHandler = NewGoogleHandler(googleOauth, store)
 	})
 
 	t.Run("auth_code_url", func(t *testing.T) {
