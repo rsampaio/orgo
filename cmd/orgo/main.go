@@ -64,7 +64,7 @@ func main() {
 		"Google":  googleHandler.AuthCodeURL(),
 	}
 
-	webHandler := web.NewWebHandler(ctx, store, urls)
+	handler := web.NewHandler(ctx, store, urls)
 
 	// Default handler
 	http.HandleFunc("/dropbox/webhook", dropboxHandler.WebhookHandler)
@@ -72,8 +72,8 @@ func main() {
 	http.HandleFunc("/google/oauth", googleHandler.OauthHandler)
 	fs := http.FileServer(http.Dir("static"))
 	http.Handle("/static/", http.StripPrefix("/static/", fs))
-	templateHandler := http.HandlerFunc(webHandler.TemplateHandler)
-	http.Handle("/", webHandler.IndexMiddleware(templateHandler))
+	templateHandler := http.HandlerFunc(handler.TemplateHandler)
+	http.Handle("/", handler.IndexMiddleware(templateHandler))
 
 	log.Fatal(http.ListenAndServe(":8080", nil).Error())
 }

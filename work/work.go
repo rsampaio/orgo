@@ -7,7 +7,7 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	orgodb "gitlab.com/rvaz/orgo/db"
-	calendar "google.golang.org/api/calendar/v3"
+	tasks "google.golang.org/api/tasks/v1"
 
 	"github.com/dropbox/dropbox-sdk-go-unofficial/dropbox"
 	"github.com/dropbox/dropbox-sdk-go-unofficial/dropbox/files"
@@ -23,7 +23,7 @@ type Work struct {
 	// ErrChan receives errors and abort operations
 	ErrChan chan error
 	// CalendarChan receives entries to syncn with google calendar if necessary
-	CalendarChan chan *orgodb.OrgEntry
+	CalendarChan chan []*orgodb.OrgEntry
 
 	GoogleOauth  *oauth2.Config
 	DropboxOauth *oauth2.Config
@@ -36,7 +36,7 @@ func NewWorker(googleOauth, dropboxOauth *oauth2.Config) *Work {
 	return &Work{
 		db:           orgodb.NewDB("orgo.db"),
 		WorkChan:     make(chan string, 100),
-		CalendarChan: make(chan *orgodb.OrgEntry),
+		CalendarChan: make(chan []*orgodb.OrgEntry),
 		ErrChan:      make(chan error),
 		GoogleOauth:  googleOauth,
 		DropboxOauth: dropboxOauth,
@@ -78,11 +78,7 @@ func (w *Work) Process(accountID string) {
 			w.ErrChan <- err
 		}
 
-		entries := w.ParseEntries(content, accountID)
-		for _, e := range entries {
-			// TODO: Save entry to db or update
-			w.CalendarChan <- e
-		}
+		w.CalendarChan <- w.ParseEntries(content, accountID)
 	}
 }
 
@@ -135,56 +131,133 @@ func (w *Work) ParseEntries(content []byte, accountID string) []*orgodb.OrgEntry
 }
 
 // Calendar syncs entries with google calendar
-func (w *Work) Calendar(entry *orgodb.OrgEntry) {
-	_, err := w.db.GetEntry(entry.Title, entry.UserID)
-	if err != nil {
-		err := w.db.SaveEntry(entry)
-		if err != nil {
-			w.ErrChan <- err
-		}
-	}
+func (w *Work) Calendar(entries []*orgodb.OrgEntry) {
 
-	token, _, err := w.db.GetToken("google", entry.UserID)
+	token, _, err := w.db.GetToken("google", entries[0].UserID)
 	if err != nil {
 		w.ErrChan <- err
 	}
 
 	client := w.GoogleOauth.Client(oauth2.NoContext, &oauth2.Token{AccessToken: token})
-	service, err := calendar.New(client)
+	service, err := tasks.New(client)
 	if err != nil {
 		w.ErrChan <- err
 		return
 	}
 
-	calendarService := calendar.NewCalendarsService(service)
-	calendarListService := calendar.NewCalendarListService(service)
-
-	calendarListCall := calendarListService.List()
-	list, err := calendarListCall.Do()
+	taskService, err := getTasklist(service)
 	if err != nil {
 		w.ErrChan <- err
 		return
 	}
 
-	var orgoCalendar *calendar.Calendar
-	for _, calendar := range list.Items {
-		if calendar.Summary == "orgo" {
-			calendarGetCall := calendarService.Get(calendar.Id)
-			orgoCalendar, err = calendarGetCall.Do()
-			if err != nil {
-				w.ErrChan <- err
-				return
+	for _, entry := range entries {
+		err := w.db.SaveOrUpdate(entry)
+		if err != nil {
+			w.ErrChan <- err
+		}
+
+		task := &tasks.Task{
+			Title: entry.Title,
+			Due:   entry.Scheduled.Format(time.RFC3339),
+			Notes: strings.Join(entry.Body, "\n"),
+		}
+
+		err = addTask(service, taskService.Id, task)
+		if err != nil {
+			w.ErrChan <- err
+			return
+		}
+	}
+
+	deleteTasks(service, taskService.Id, entries)
+}
+
+func deleteTasks(s *tasks.Service, tasklistID string, taskList []*orgodb.OrgEntry) error {
+	t := tasks.NewTasksService(s)
+	tlCall := t.List(tasklistID)
+	tl, err := tlCall.Do()
+	if err != nil {
+		return err
+	}
+
+loop:
+	for _, tt := range tl.Items {
+		var del bool
+		for _, ta := range taskList {
+			if tt.Title == ta.Title {
+				continue loop
 			}
+			del = true
+		}
+
+		if del {
+			log.Infof("deleting task: %v", tt.Title)
+			delCall := t.Delete(tasklistID, tt.Id)
+			err := delCall.Do()
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func addTask(s *tasks.Service, tasklistID string, entry *tasks.Task) error {
+	t := tasks.NewTasksService(s)
+	tlCall := t.List(tasklistID)
+	tl, err := tlCall.Do()
+	if err != nil {
+		return err
+	}
+
+	for _, ta := range tl.Items {
+		if ta.Title == entry.Title {
+			log.Infof("event already exist: %v, updating", ta.Title)
+			ta.Notes = entry.Notes
+			ta.Due = entry.Due
+			tuCall := t.Update(tasklistID, ta.Id, ta)
+			if _, err := tuCall.Do(); err != nil {
+				return err
+			}
+			return nil
+		}
+	}
+
+	tiCall := t.Insert(tasklistID, entry)
+	e, err := tiCall.Do()
+	if err != nil {
+		return err
+	}
+
+	log.Infof("task added: %v", e.Id)
+	return nil
+}
+
+func getTasklist(service *tasks.Service) (*tasks.TaskList, error) {
+	ts := tasks.NewTasklistsService(service)
+	call := ts.List()
+	list, err := call.Do()
+	if err != nil {
+		return nil, err
+	}
+	var tl *tasks.TaskList
+	for _, taskList := range list.Items {
+		if taskList.Title == "orgo" {
+			tl = taskList
 			break
 		}
 	}
 
-	if orgoCalendar == nil {
-		calendarInsertCall := calendarService.Insert(&calendar.Calendar{Summary: "orgo"})
-		orgoCalendar, err = calendarInsertCall.Do()
+	if tl == nil {
+		insertcall := ts.Insert(&tasks.TaskList{Title: "orgo"})
+		tl, err = insertcall.Do()
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	log.Infof("calendar %v", orgoCalendar)
+	return tl, nil
 }
 
 // WaitWork waits for work on worker channels

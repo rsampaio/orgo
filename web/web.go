@@ -14,17 +14,17 @@ import (
 	"github.com/gorilla/sessions"
 )
 
-// WebHandler struct with unexported fields.
-type WebHandler struct {
+// Handler struct with unexported fields.
+type Handler struct {
 	ctx   context.Context
 	store *sessions.CookieStore
 	urls  map[string]string
 	db    *orgodb.DB
 }
 
-// NewWebHandler returns an instance of WebHandler.
-func NewWebHandler(ctx context.Context, store *sessions.CookieStore, urls map[string]string) *WebHandler {
-	return &WebHandler{
+// NewHandler returns an instance of Handler.
+func NewHandler(ctx context.Context, store *sessions.CookieStore, urls map[string]string) *Handler {
+	return &Handler{
 		ctx:   ctx,
 		store: store,
 		urls:  urls,
@@ -33,7 +33,7 @@ func NewWebHandler(ctx context.Context, store *sessions.CookieStore, urls map[st
 }
 
 // IndexMiddleware wrap requests to protected resources.
-func (h *WebHandler) IndexMiddleware(next http.Handler) http.Handler {
+func (h *Handler) IndexMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		session, _ := h.store.Get(r, "orgo-session")
 		if ok := session.Values["session_id"]; ok != nil {
@@ -66,7 +66,7 @@ func (h *WebHandler) IndexMiddleware(next http.Handler) http.Handler {
 }
 
 // TemplateHandler render templates for specific urls.
-func (h *WebHandler) TemplateHandler(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) TemplateHandler(w http.ResponseWriter, r *http.Request) {
 	var (
 		layout   = path.Join("tmpl", "layout.html")
 		bodyTmpl = path.Join("tmpl", r.URL.Path)

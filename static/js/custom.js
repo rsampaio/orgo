@@ -33,7 +33,7 @@ function startApp() {
   gapi.load('auth2', function() {
     auth2 = gapi.auth2.init({
       client_id: "203571506393-0vg0i4muh04j9t3vurm68c867ht9uccl.apps.googleusercontent.com",
-      scope: "profile email https://www.googleapis.com/auth/calendar"
+      scope: "profile email https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/tasks"
     });
 
     $('#google-logout')

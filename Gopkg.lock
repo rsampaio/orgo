@@ -1,0 +1,91 @@
+memo = "fb10ea5be122c4c8addcba70601fc58cc47132309c505fda9067fb59379844d7"
+
+[[projects]]
+  branch = "master"
+  name = "cloud.google.com/go"
+  packages = ["compute/metadata","internal"]
+  revision = "90296fd601ebfc594192e722a022663b0c3f8756"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/Sirupsen/logrus"
+  packages = ["."]
+  revision = "3ec0642a7fb6488f65b06f9040adc67e3990296a"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/dropbox/dropbox-sdk-go-unofficial"
+  packages = ["dropbox","dropbox/async","dropbox/files","dropbox/properties"]
+  revision = "6ee7ae4010cd6945bc7b2fff332752ef279a996c"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/golang/protobuf"
+  packages = ["proto"]
+  revision = "8ee79997227bf9b34611aee7946ae64735e6fd93"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/gorilla/context"
+  packages = ["."]
+  revision = "08b5f424b9271eedf6f9f0ce86cb9396ed337a42"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/gorilla/securecookie"
+  packages = ["."]
+  revision = "fa5329f913702981df43dcb2a380bac429c810b5"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/gorilla/sessions"
+  packages = ["."]
+  revision = "ca9ada44574153444b00d3fd9c8559e4cc95f896"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/joeshaw/envdecode"
+  packages = ["."]
+  revision = "32118ea5f56d5358408e78d150be1843a695e35c"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/mattn/go-sqlite3"
+  packages = ["."]
+  revision = "fba66eb11643069e747022997e9be3b502b2c6fb"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/satori/go.uuid"
+  packages = ["."]
+  revision = "b061729afc07e77a8aa4fad0a2fd840958f1942a"
+
+[[projects]]
+  branch = "master"
+  name = "golang.org/x/net"
+  packages = ["context","context/ctxhttp"]
+  revision = "1358eff22f0dd0c54fc521042cc607f6ff4b531a"
+
+[[projects]]
+  branch = "master"
+  name = "golang.org/x/oauth2"
+  packages = [".","google","internal","jws","jwt"]
+  revision = "3c3a985cb79f52a3190fbc056984415ca6763d01"
+
+[[projects]]
+  branch = "master"
+  name = "golang.org/x/sys"
+  packages = ["unix"]
+  revision = "a646d33e2ee3172a661fc09bca23bb4889a41bc8"
+
+[[projects]]
+  branch = "master"
+  name = "google.golang.org/api"
+  packages = ["calendar/v3","gensupport","googleapi","googleapi/internal/uritemplates","oauth2/v2","tasks/v1"]
+  revision = "adba394bac5800ff2e620d040e9401528f5b7615"
+
+[[projects]]
+  branch = "master"
+  name = "google.golang.org/appengine"
+  packages = [".","internal","internal/app_identity","internal/base","internal/datastore","internal/log","internal/modules","internal/remote_api","internal/urlfetch","urlfetch"]
+  revision = "a2c54d2174c17540446e0ced57d9d459af61bc1c"

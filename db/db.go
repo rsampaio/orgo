@@ -221,6 +221,17 @@ func (d *DB) SaveEntry(entry *OrgEntry) error {
 	return nil
 }
 
+func (d *DB) SaveOrUpdate(entry *OrgEntry) error {
+	_, err := d.GetEntry(entry.Title, entry.UserID)
+	if err != nil {
+		err := d.SaveEntry(entry)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // Close closes database handler
 func (d *DB) Close() error {
 	return d.handle.Close()

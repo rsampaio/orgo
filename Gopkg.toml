@@ -1,0 +1,32 @@
+
+[[dependencies]]
+  branch = "master"
+  name = "github.com/Sirupsen/logrus"
+
+[[dependencies]]
+  branch = "master"
+  name = "github.com/dropbox/dropbox-sdk-go-unofficial"
+
+[[dependencies]]
+  branch = "master"
+  name = "github.com/gorilla/sessions"
+
+[[dependencies]]
+  branch = "master"
+  name = "github.com/joeshaw/envdecode"
+
+[[dependencies]]
+  branch = "master"
+  name = "github.com/mattn/go-sqlite3"
+
+[[dependencies]]
+  branch = "master"
+  name = "github.com/satori/go.uuid"
+
+[[dependencies]]
+  branch = "master"
+  name = "golang.org/x/oauth2"
+
+[[dependencies]]
+  branch = "master"
+  name = "google.golang.org/api"
