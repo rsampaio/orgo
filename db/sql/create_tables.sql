@@ -5,10 +5,13 @@ create table users (
 );
 
 create table tokens (
-    account  text unique,
-    provider text,
-    code     text,
-    token    text
+    account       text unique,
+    provider      text,
+    code          text,
+    token         text,
+    token_type    text,
+    token_refresh text,
+    expire        datetime
 );
 
 create table map_google_dropbox (

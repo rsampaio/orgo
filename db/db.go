@@ -9,6 +9,8 @@ import (
 	log "github.com/Sirupsen/logrus"
 	_ "github.com/mattn/go-sqlite3"
 	uuid "github.com/satori/go.uuid"
+
+	"golang.org/x/oauth2"
 )
 
 // DB struct with unexported fields.
@@ -33,6 +35,11 @@ type OrgEntry struct {
 	Date      time.Time
 	Scheduled time.Time
 	Closed    time.Time
+}
+
+type Token struct {
+	*oauth2.Token
+	Code string
 }
 
 // NewDB creates a new DB instance.
@@ -128,19 +135,29 @@ func (d *DB) GetGoogleID(dropboxID string) (string, error) {
 }
 
 // SaveToken saves the code from an OAUTH nepotiation with a provider for a specific account.
-func (d *DB) SaveToken(provider, account, code, token string) error {
+func (d *DB) SaveToken(provider, account, code string, token *oauth2.Token) error {
 	tx, err := d.handle.Begin()
 	if err != nil {
 		return err
 	}
 
-	stmt, err := tx.Prepare("insert into tokens(provider, account, code, token) values(?, ?, ?, ?)")
+	stmt, err := tx.Prepare("insert into tokens(provider, account, code, token, token_type, token_refresh, expire) values(?, ?, ?, ?, ?, ?, ?)")
 	defer stmt.Close()
 	if err != nil {
 		return err
 	}
 
-	if _, err := stmt.Exec(provider, account, code, token); err != nil {
+	_, err = stmt.Exec(
+		provider,
+		account,
+		code,
+		token.AccessToken,
+		token.TokenType,
+		token.RefreshToken,
+		token.Expiry,
+	)
+
+	if err != nil {
 		tx.Rollback()
 		return err
 	}
@@ -150,17 +167,15 @@ func (d *DB) SaveToken(provider, account, code, token string) error {
 }
 
 // GetToken retrieves the token for a provider and account.
-func (d *DB) GetToken(provider, account string) (string, string, error) {
-	var (
-		token string
-		code  string
-	)
-	err := d.handle.QueryRow("select token, code from tokens where provider=? and account=?", provider, account).Scan(&token, &code)
+func (d *DB) GetToken(provider, account string) (Token, error) {
+	t := Token{Token: &oauth2.Token{}}
+
+	err := d.handle.QueryRow("select token, code, token_type, token_refresh, expire from tokens where provider=? and account=?", provider, account).Scan(&t.AccessToken, &t.Code, &t.TokenType, &t.RefreshToken, &t.Expiry)
 	if err != nil {
-		return "", "", err
+		return Token{}, err
 	}
 
-	return token, code, nil
+	return t, nil
 }
 
 // GetEntry retrieves an OrgEntry from the database by title and email.

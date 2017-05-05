@@ -97,10 +97,10 @@ func (h *DropboxHandler) OauthHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	uid := tok.Extra("account_id").(string)
-	token := tok.AccessToken
 
 	// save dropbox token
-	h.db.SaveToken("dropbox", uid, code, token)
+	h.db.SaveToken("dropbox", uid, code, tok)
+
 	session, err := h.store.Get(r, "orgo-session")
 	if err != nil {
 		log.Errorf("get session %s", err.Error())

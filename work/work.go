@@ -48,7 +48,7 @@ func NewWorker(googleOauth, dropboxOauth *oauth2.Config) *Work {
 // the local database to reflect the file in dropbox
 func (w *Work) Process(accountID string) {
 	location, _ = time.LoadLocation("America/Los_Angeles")
-	key, _, err := w.db.GetToken("dropbox", accountID)
+	t, err := w.db.GetToken("dropbox", accountID)
 	if err != nil {
 		log.Error(err.Error())
 		return
@@ -56,7 +56,7 @@ func (w *Work) Process(accountID string) {
 
 	log.Infof("processing=%s", accountID)
 
-	dbxCfg := dropbox.Config{Token: string(key)}
+	dbxCfg := dropbox.Config{Token: string(t.AccessToken)}
 	dbx := files.New(dbxCfg)
 
 	listFolderArg := files.NewListFolderArg("")
@@ -133,12 +133,12 @@ func (w *Work) ParseEntries(content []byte, accountID string) []*orgodb.OrgEntry
 // Calendar syncs entries with google calendar
 func (w *Work) Calendar(entries []*orgodb.OrgEntry) {
 
-	token, _, err := w.db.GetToken("google", entries[0].UserID)
+	t, err := w.db.GetToken("google", entries[0].UserID)
 	if err != nil {
 		w.ErrChan <- err
 	}
 
-	client := w.GoogleOauth.Client(oauth2.NoContext, &oauth2.Token{AccessToken: token})
+	client := w.GoogleOauth.Client(oauth2.NoContext, t.Token)
 	service, err := tasks.New(client)
 	if err != nil {
 		w.ErrChan <- err

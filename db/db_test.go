@@ -51,22 +51,22 @@ func TestDB(t *testing.T) {
 	})
 
 	t.Run("Token", func(t *testing.T) {
-		err := d.SaveToken("provider1", "account1", "abc123", "token123")
+		err := d.SaveToken("provider1", "account1", "abc123", "token123", "type", "refresh", time.Now())
 		if err != nil {
 			t.Fatal(err.Error())
 		}
 
-		token, code, err := d.GetToken("provider1", "account1")
+		t, err := d.GetToken("provider1", "account1")
 		if err != nil {
 			t.Fatal(err.Error())
 		}
 
-		if token != "token123" {
+		if t.Token != "token123" {
 			t.Fatal("token is invalid")
 		}
 
-		if code != "abc123" {
-			t.Fatalf("code is %v, want abc123", code)
+		if t.Code != "abc123" {
+			t.Fatalf("code is %v, want abc123", t.Code)
 		}
 
 	})

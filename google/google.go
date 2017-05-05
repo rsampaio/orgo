@@ -35,8 +35,8 @@ func (g *GoogleHandler) AuthCodeURL() string {
 
 // ServiceGetter get a google service configured
 func (g *GoogleHandler) ServiceGetter(userID string) {
-	token, code, err := g.db.GetToken("google", userID)
-	log.Info(token, code, err)
+	t, err := g.db.GetToken("google", userID)
+	log.Info(t.AccessToken, t.Code, err)
 }
 
 // OauthHandler will receive the AuthCode from when the user authorize the app
@@ -63,7 +63,7 @@ func (g *GoogleHandler) OauthHandler(w http.ResponseWriter, r *http.Request) {
 	tokenCall.AccessToken(tok.AccessToken)
 	tokenInfo, _ := tokenCall.Do()
 
-	g.db.SaveToken("google", tokenInfo.UserId, code, tok.AccessToken)
+	g.db.SaveToken("google", tokenInfo.UserId, code, tok)
 
 	// Session
 	session, err := g.store.Get(r, "orgo-session")
