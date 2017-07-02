@@ -5,13 +5,13 @@ create table users (
 );
 
 create table tokens (
-    account       text unique,
+    account       text unique primary key,
     provider      text,
     code          text,
     token         text,
     token_type    text,
     token_refresh text,
-    expire        datetime
+    expiry        datetime
 );
 
 create table map_google_dropbox (
@@ -20,12 +20,12 @@ create table map_google_dropbox (
 );
 
 create table entries (
-    userid        text,
+    user_id       text,
     title         text unique,
     tag           text,
     priority      text,
     body          text,
-    create_date   datetime,
+    created_at    datetime,
     scheduled     datetime,
     closed        datetime
 );

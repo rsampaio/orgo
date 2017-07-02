@@ -1,21 +1,17 @@
 package db
 
 import (
-	"database/sql"
 	"io/ioutil"
-	"strings"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
-	_ "github.com/mattn/go-sqlite3"
-	uuid "github.com/satori/go.uuid"
-
-	"golang.org/x/oauth2"
+	upper "upper.io/db.v3"
+	"upper.io/db.v3/lib/sqlbuilder"
+	"upper.io/db.v3/sqlite"
 )
 
 // DB struct with unexported fields.
 type DB struct {
-	handle *sql.DB
+	sess sqlbuilder.Database
 }
 
 // OrgEntry struct defines an OrgMode entry in this format:
@@ -27,213 +23,37 @@ type DB struct {
 //    [date]
 // ```
 type OrgEntry struct {
-	UserID    string
-	Title     string
-	Tag       string
-	Priority  string
-	Body      []string
-	Date      time.Time
-	Scheduled time.Time
-	Closed    time.Time
-}
-
-type Token struct {
-	*oauth2.Token
-	Code string
+	UserID    string    `db:"user_id"`
+	Title     string    `db:"title"`
+	Tag       string    `db:"tag"`
+	Priority  string    `db:"priority"`
+	Body      string    `db:"body"`
+	Date      time.Time `db:"created_at"`
+	Scheduled time.Time `db:"scheduled"`
+	Closed    time.Time `db:"closed"`
 }
 
 // NewDB creates a new DB instance.
 func NewDB(file string) *DB {
-	db, err := sql.Open("sqlite3", file)
+	db, err := sqlite.Open(&sqlite.ConnectionURL{Database: file})
 	if err != nil {
 		return nil
 	}
-	return &DB{handle: db}
-}
-
-// SaveSession creates an uuid ID for the given userID as a session.
-func (d *DB) SaveSession(userID string) (string, error) {
-	sessionID := uuid.NewV4().String()
-	tx, err := d.handle.Begin()
-	if err != nil {
-		log.Error(err.Error())
-		return "", err
-	}
-
-	stmt, err := tx.Prepare("insert into sessions(sid, account) values(?, ?)")
-	defer stmt.Close()
-	if err != nil {
-		log.Error(err.Error())
-		return "", err
-	}
-
-	if _, err := stmt.Exec(sessionID, userID); err != nil {
-		tx.Rollback()
-		log.Error("save session", err.Error())
-		return "", err
-	}
-	tx.Commit()
-	return sessionID, nil
-}
-
-// GetSession retrieves the userID for the sessionID provided.
-func (d *DB) GetSession(sessionID string) (string, error) {
-	var userID string
-
-	err := d.handle.QueryRow("select account from sessions where sid=?", sessionID).Scan(&userID)
-	if err != nil {
-		log.Error(err.Error())
-		return "", err
-	}
-
-	return userID, nil
-}
-
-// SaveGoogleDropbox creates the map between google and dropbox accounts.
-func (d *DB) SaveGoogleDropbox(googleID, dropboxID string) error {
-	tx, err := d.handle.Begin()
-	if err != nil {
-		return err
-	}
-
-	stmt, err := tx.Prepare("insert into map_google_dropbox(google_id, dropbox_id) values(?, ?)")
-	if err != nil {
-		return err
-	}
-
-	if _, err = stmt.Exec(googleID, dropboxID); err != nil {
-		tx.Rollback()
-		return err
-	}
-
-	return tx.Commit()
-}
-
-// GetDropboxID retrieves the dropbox id for a given google id.
-func (d *DB) GetDropboxID(googleID string) (string, error) {
-	var dropboxID string
-
-	err := d.handle.QueryRow("select dropbox_id from map_google_dropbox where google_id=?", googleID).Scan(&dropboxID)
-	if err != nil {
-		log.Error("get dropbox id", err.Error())
-		return "", err
-	}
-
-	return dropboxID, nil
-}
-
-func (d *DB) GetGoogleID(dropboxID string) (string, error) {
-	var googleID string
-
-	err := d.handle.QueryRow("select google_id from map_google_dropbox where dropbox_id=?", dropboxID).Scan(&googleID)
-	if err != nil {
-		log.Errorf("get google id: %v", err.Error())
-		return "", err
-	}
-
-	return googleID, nil
-}
-
-// SaveToken saves the code from an OAUTH nepotiation with a provider for a specific account.
-func (d *DB) SaveToken(provider, account, code string, token *oauth2.Token) error {
-	tx, err := d.handle.Begin()
-	if err != nil {
-		return err
-	}
-
-	stmt, err := tx.Prepare("insert into tokens(provider, account, code, token, token_type, token_refresh, expire) values(?, ?, ?, ?, ?, ?, ?)")
-	defer stmt.Close()
-	if err != nil {
-		return err
-	}
-
-	_, err = stmt.Exec(
-		provider,
-		account,
-		code,
-		token.AccessToken,
-		token.TokenType,
-		token.RefreshToken,
-		token.Expiry,
-	)
-
-	if err != nil {
-		tx.Rollback()
-		return err
-	}
-
-	tx.Commit()
-	return nil
-}
-
-// GetToken retrieves the token for a provider and account.
-func (d *DB) GetToken(provider, account string) (Token, error) {
-	t := Token{Token: &oauth2.Token{}}
-
-	err := d.handle.QueryRow("select token, code, token_type, token_refresh, expire from tokens where provider=? and account=?", provider, account).Scan(&t.AccessToken, &t.Code, &t.TokenType, &t.RefreshToken, &t.Expiry)
-	if err != nil {
-		return Token{}, err
-	}
-
-	return t, nil
+	return &DB{sess: db}
 }
 
 // GetEntry retrieves an OrgEntry from the database by title and email.
 func (d *DB) GetEntry(title, userID string) (*OrgEntry, error) {
-	var (
-		entry OrgEntry
-		body  string
-	)
-
-	err := d.handle.QueryRow(
-		"select title, tag, priority, body, create_date, scheduled, closed from entries where title=? and userid=?",
-		title,
-		userID,
-	).Scan(
-		&entry.Title,
-		&entry.Tag,
-		&entry.Priority,
-		&body,
-		&entry.Date,
-		&entry.Scheduled,
-		&entry.Closed,
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	entry.Body = strings.Split(body, "\n")
-	return &entry, nil
+	var entry OrgEntry
+	err := d.sess.Collection("entries").Find(upper.Cond{"title": title}, upper.Cond{"user_id": userID}).One(&entry)
+	return &entry, err
 }
 
 // SaveEntry saves an OrgEntry to the database.
 func (d *DB) SaveEntry(entry *OrgEntry) error {
-	tx, err := d.handle.Begin()
-	if err != nil {
-		return err
-	}
-
-	stmt, err := tx.Prepare("insert into entries(userid, title, tag, priority, body, create_date, scheduled, closed) values(?, ?, ?, ?, ?, ?, ?, ?)")
-	if err != nil {
-		return err
-	}
-
-	if _, err := stmt.Exec(
-		entry.UserID,
-		entry.Title,
-		entry.Tag,
-		entry.Priority,
-		strings.Join(entry.Body, "\n"),
-		entry.Date,
-		entry.Scheduled,
-		entry.Closed,
-	); err != nil {
-		tx.Rollback()
-		return err
-	}
-
-	tx.Commit()
-	return nil
+	col := d.sess.Collection("entries")
+	_, err := col.Insert(entry)
+	return err
 }
 
 func (d *DB) SaveOrUpdate(entry *OrgEntry) error {
@@ -247,9 +67,9 @@ func (d *DB) SaveOrUpdate(entry *OrgEntry) error {
 	return nil
 }
 
-// Close closes database handler
+// Close closes database sessr
 func (d *DB) Close() error {
-	return d.handle.Close()
+	return d.sess.Close()
 }
 
 func (d *DB) createTables() error {
@@ -258,7 +78,7 @@ func (d *DB) createTables() error {
 		return err
 	}
 
-	_, err = d.handle.Exec(string(sql))
+	_, err = d.sess.Exec(string(sql))
 	if err != nil {
 		return err
 	}

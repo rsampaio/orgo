@@ -124,7 +124,7 @@ func (w *Work) ParseEntries(content []byte, accountID string) []*orgodb.OrgEntry
 		} else if strings.HasPrefix(line, "* Tasks") {
 			continue // TODO: Ignore first line?
 		} else {
-			entry.Body = append(entry.Body, line)
+			entry.Body = entry.Body + line
 		}
 	}
 	return entries
@@ -138,7 +138,11 @@ func (w *Work) Calendar(entries []*orgodb.OrgEntry) {
 		w.ErrChan <- err
 	}
 
-	client := w.GoogleOauth.Client(oauth2.NoContext, t.Token)
+	client := w.GoogleOauth.Client(oauth2.NoContext, &oauth2.Token{
+		AccessToken:  t.AccessToken,
+		RefreshToken: t.RefreshToken,
+		Expiry:       t.Expiry,
+	})
 	service, err := tasks.New(client)
 	if err != nil {
 		w.ErrChan <- err
@@ -157,10 +161,18 @@ func (w *Work) Calendar(entries []*orgodb.OrgEntry) {
 			w.ErrChan <- err
 		}
 
+		var completed *string
+		closed := entry.Closed.Format(time.RFC3339)
+		completed = &closed
 		task := &tasks.Task{
-			Title: entry.Title,
-			Due:   entry.Scheduled.Format(time.RFC3339),
-			Notes: strings.Join(entry.Body, "\n"),
+			Title:     entry.Title,
+			Due:       entry.Scheduled.Format(time.RFC3339),
+			Completed: completed,
+			Notes:     entry.Body,
+		}
+
+		if completed != nil {
+			task.Status = "completed"
 		}
 
 		err = addTask(service, taskService.Id, task)

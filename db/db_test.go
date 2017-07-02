@@ -1,14 +1,18 @@
 package db
 
 import (
+	"os"
 	"testing"
 	"time"
+
+	"golang.org/x/oauth2"
 )
 
 func TestDB(t *testing.T) {
-	d := NewDB("")
+	d := NewDB("/tmp/orgo-test.db")
+	defer os.RemoveAll("/tmp/orgo-test.db")
 	defer d.Close()
-	if d == nil || d.handle == nil {
+	if d == nil || d.sess == nil {
 		t.Fatal("failed to open db")
 	}
 
@@ -51,22 +55,33 @@ func TestDB(t *testing.T) {
 	})
 
 	t.Run("Token", func(t *testing.T) {
-		err := d.SaveToken("provider1", "account1", "abc123", "token123", "type", "refresh", time.Now())
+		err := d.SaveToken(
+			"provider1",
+			"account1",
+			"abc123",
+			&oauth2.Token{
+				AccessToken:  "token123",
+				TokenType:    "type",
+				RefreshToken: "refresh",
+				Expiry:       time.Now(),
+			},
+		)
+
 		if err != nil {
 			t.Fatal(err.Error())
 		}
 
-		t, err := d.GetToken("provider1", "account1")
+		to, err := d.GetToken("provider1", "account1")
 		if err != nil {
 			t.Fatal(err.Error())
 		}
 
-		if t.Token != "token123" {
+		if to.AccessToken != "token123" {
 			t.Fatal("token is invalid")
 		}
 
-		if t.Code != "abc123" {
-			t.Fatalf("code is %v, want abc123", t.Code)
+		if to.Code != "abc123" {
+			t.Fatalf("code is %v, want abc123", to.Code)
 		}
 
 	})
@@ -79,7 +94,7 @@ func TestDB(t *testing.T) {
 				Title:     "title",
 				Tag:       "tag",
 				Priority:  "prio",
-				Body:      []string{"body"},
+				Body:      "body\naaa\n",
 				Date:      ti,
 				Scheduled: ti,
 				Closed:    ti,
