@@ -11,11 +11,11 @@ import (
 
 	"github.com/gorilla/sessions"
 	"github.com/joeshaw/envdecode"
-	"gitlab.com/rvaz/orgo/conf"
-	"gitlab.com/rvaz/orgo/dropbox"
-	"gitlab.com/rvaz/orgo/google"
-	"gitlab.com/rvaz/orgo/web"
-	"gitlab.com/rvaz/orgo/work"
+	"github.com/rsampaio/orgo/conf"
+	"github.com/rsampaio/orgo/dropbox"
+	"github.com/rsampaio/orgo/google"
+	"github.com/rsampaio/orgo/web"
+	"github.com/rsampaio/orgo/work"
 	"golang.org/x/oauth2"
 )
 

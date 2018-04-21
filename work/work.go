@@ -6,7 +6,7 @@ import (
 	"time"
 
 	log "github.com/Sirupsen/logrus"
-	orgodb "gitlab.com/rvaz/orgo/db"
+	orgodb "github.com/rsampaio/orgo/db"
 	tasks "google.golang.org/api/tasks/v1"
 
 	"github.com/dropbox/dropbox-sdk-go-unofficial/dropbox"

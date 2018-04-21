@@ -4,8 +4,8 @@ import (
 	"net/http"
 
 	log "github.com/Sirupsen/logrus"
+	orgodb "github.com/rsampaio/orgo/db"
 	uuid "github.com/satori/go.uuid"
-	orgodb "gitlab.com/rvaz/orgo/db"
 	oauth2api "google.golang.org/api/oauth2/v2"
 
 	"github.com/gorilla/sessions"

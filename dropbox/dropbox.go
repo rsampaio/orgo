@@ -13,7 +13,7 @@ import (
 	"net/http"
 
 	log "github.com/Sirupsen/logrus"
-	orgodb "gitlab.com/rvaz/orgo/db"
+	orgodb "github.com/rsampaio/orgo/db"
 
 	"github.com/gorilla/sessions"
 	"golang.org/x/oauth2"
